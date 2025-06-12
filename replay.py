@@ -14,6 +14,140 @@ app = Flask(
     static_url_path="/static",
 )
 
+# 模擬的角色基本資料
+persona_profiles = {
+    "盧品蓉": {
+        "age": 20,
+        "innate": "友善、樂於助人",
+        "learned": "擅長溝通、組織能力強",
+        "lifestyle": "喜歡社交活動，經常參與社團",
+        "currently": "正在準備期末考試"
+    },
+    "鄭傑丞": {
+        "age": 21,
+        "innate": "認真負責、注重細節",
+        "learned": "程式設計、數據分析",
+        "lifestyle": "規律作息，喜歡閱讀和學習",
+        "currently": "正在做實習專案"
+    },
+    "莊于萱": {
+        "age": 19,
+        "innate": "創意豐富、藝術天賦",
+        "learned": "繪畫、設計、攝影",
+        "lifestyle": "自由奔放，喜歡探索新事物",
+        "currently": "正在準備藝術作品展覽"
+    },
+    "施宇鴻": {
+        "age": 22,
+        "innate": "邏輯思維強、冷靜理性",
+        "learned": "工程技術、問題解決",
+        "lifestyle": "喜歡思考和研究，偏向獨處",
+        "currently": "正在進行研究項目"
+    },
+    "游庭瑄": {
+        "age": 45,
+        "innate": "博學多聞、循循善誘",
+        "learned": "教學經驗豐富、學術研究",
+        "lifestyle": "熱愛教育，關心學生成長",
+        "currently": "正在指導學生論文"
+    },
+    "李昇峰": {
+        "age": 50,
+        "innate": "細心專業、服務至上",
+        "learned": "藥學專業、健康諮詢",
+        "lifestyle": "穩重可靠，重視家庭和工作平衡",
+        "currently": "正在管理藥店業務"
+    },
+    "魏祺紘": {
+        "age": 18,
+        "innate": "活潑好動、求知慾強",
+        "learned": "快速學習、適應能力強",
+        "lifestyle": "青春活力，喜歡嘗試新事物",
+        "currently": "正在適應大學生活"
+    },
+    "陳冠佑": {
+        "age": 35,
+        "innate": "健談幽默、善於交際",
+        "learned": "調酒技藝、人際溝通",
+        "lifestyle": "夜貓子，享受與人互動的樂趣",
+        "currently": "正在經營酒吧生意"
+    },
+    "蔡宗陞": {
+        "age": 28,
+        "innate": "溫和親切、追求品質",
+        "learned": "咖啡製作、店面管理",
+        "lifestyle": "注重生活品味，熱愛咖啡文化",
+        "currently": "正在研發新的咖啡配方"
+    }
+}
+
+
+def extract_interaction_data(checkpoints_folder):
+    """提取AI與物品/地區的交互數據"""
+    object_interactions = collections.defaultdict(int)
+    location_interactions = collections.defaultdict(int)
+    
+    try:
+        checkpoint_files = [f for f in os.listdir(checkpoints_folder) 
+                           if f.startswith("simulate-") and f.endswith(".json")]
+        checkpoint_files.sort()
+    except FileNotFoundError:
+        return object_interactions, location_interactions
+    
+    for checkpoint_file in checkpoint_files:
+        file_path = os.path.join(checkpoints_folder, checkpoint_file)
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            
+            if "agents" in data:
+                for agent_name, agent_data in data["agents"].items():
+                    if agent_name not in personas:
+                        continue
+                    
+                    if "action" in agent_data and "event" in agent_data["action"]:
+                        event = agent_data["action"]["event"]
+                        
+                        if "address" in event and event["address"]:
+                            address = event["address"]
+                            
+                            if isinstance(address, list) and len(address) >= 2:
+                                if len(address) >= 3:
+                                    location = address[-2]
+                                    obj = address[-1]
+                                else:
+                                    location = address[-1]
+                                    obj = address[-1]
+                                
+                                # 統計地區交互
+                                if location and location.strip():
+                                    location_key = (agent_name, location)
+                                    location_interactions[location_key] += 1
+                                
+                                # 統計物品交互
+                                general_locations = [
+                                    "客廳", "廚房", "臥室", "浴室", "辦公室", "餐廳", 
+                                    "大廳", "走廊", "陽台", "房間", "家", "屋子",
+                                    "living room", "kitchen", "bedroom", "bathroom",
+                                    "咖啡廳", "圖書館", "公園", "學校", "醫院",
+                                    "商店", "市場", "銀行", "郵局", "車站"
+                                ]
+                                
+                                if obj and obj.strip() and obj not in general_locations and len(obj) > 0:
+                                    object_key = (agent_name, obj)
+                                    object_interactions[object_key] += 1
+                            
+                            elif len(address) == 1:
+                                location = address[0]
+                                if location and location.strip():
+                                    location_key = (agent_name, location)
+                                    location_interactions[location_key] += 1
+        
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            continue
+    
+    return object_interactions, location_interactions
+
 
 @app.route("/", methods=['GET'])
 def index():
@@ -133,6 +267,9 @@ def interaction_graph():
                     print(f"  Error processing conversation key '{conversation_key}': {e}")
                     continue
 
+    # 獲取物品和地區交互數據
+    object_interactions, location_interactions = extract_interaction_data(checkpoint_folder)
+
     print(f"Total unique interactions found: {len(interaction_count)}")
     print("Interaction summary:")
     for (p1, p2), count in interaction_count.items():
@@ -207,13 +344,41 @@ def interaction_graph():
         "links": chat_length_links
     }
 
+    # 轉換物品和地區交互數據為前端需要的格式
+    object_interaction_list = []
+    for (agent, obj), count in object_interactions.items():
+        object_interaction_list.append({
+            "agent": agent,
+            "object": obj,
+            "count": count
+        })
+
+    location_interaction_list = []
+    for (agent, location), count in location_interactions.items():
+        location_interaction_list.append({
+            "agent": agent,
+            "location": location,
+            "count": count
+        })
+
+    # 合併所有交互數據
+    all_interaction_data = {
+        "chat_interactions": interaction_data,
+        "chat_lengths": chat_length_data,
+        "object_interactions": object_interaction_list,
+        "location_interactions": location_interaction_list,
+        "persona_profiles": persona_profiles
+    }
+
     print(f"Final data - Nodes: {len(nodes)}, Interaction links: {len(interaction_links)}, Chat length links: {len(chat_length_links)}")
+    print(f"Object interactions: {len(object_interaction_list)}, Location interactions: {len(location_interaction_list)}")
 
     # 將數據作為JSON字符串傳遞給模板，避免在模板中進行復雜的數據處理
     return render_template(
         "interaction_graph.html",
         interaction_data=json.dumps(interaction_data, ensure_ascii=False),
         chat_length_data=json.dumps(chat_length_data, ensure_ascii=False),
+        all_interaction_data=json.dumps(all_interaction_data, ensure_ascii=False),
         persona_names=personas
     )
 

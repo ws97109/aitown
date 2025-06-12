@@ -44,6 +44,166 @@
       border-radius: 5px;
       margin: 10px 0;
     }
+
+    .persona-info {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin: 10px 0;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .persona-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+
+    .persona-card {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: 3px solid transparent;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .persona-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .persona-card.active {
+      border-color: #667eea;
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .persona-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      margin: 0 auto 10px;
+      object-fit: cover;
+      border: 3px solid #eee;
+    }
+
+    .persona-name {
+      font-weight: bold;
+      color: #333;
+      margin: 0;
+    }
+
+    .detail-section {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 20px 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 15px;
+      color: #333;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 8px;
+    }
+
+    .bar-chart {
+      margin: 20px 0;
+    }
+
+    .bar-item {
+      display: flex;
+      align-items: center;
+      margin: 10px 0;
+      padding: 8px;
+      background: #f8f9fa;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+    }
+
+    .bar-item:hover {
+      background: #e9ecef;
+    }
+
+    .bar-label {
+      min-width: 120px;
+      font-weight: 500;
+      color: #333;
+    }
+
+    .bar-visual {
+      flex-grow: 1;
+      height: 20px;
+      background: #e9ecef;
+      border-radius: 10px;
+      margin: 0 10px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 10px;
+      transition: width 0.8s ease;
+    }
+
+    .bar-fill.interaction {
+      background: linear-gradient(90deg, #667eea, #764ba2);
+    }
+
+    .bar-fill.location {
+      background: linear-gradient(90deg, #f093fb, #f5576c);
+    }
+
+    .bar-fill.object {
+      background: linear-gradient(90deg, #4ecdc4, #44a08d);
+    }
+
+    .bar-value {
+      min-width: 40px;
+      text-align: right;
+      font-weight: bold;
+      color: #667eea;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin: 15px 0;
+    }
+
+    .info-item {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+
+    .info-label {
+      font-weight: bold;
+      color: #667eea;
+      margin-bottom: 5px;
+    }
+
+    .info-value {
+      color: #333;
+      line-height: 1.4;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+      font-style: italic;
+    }
   </style>
 </head>
 
@@ -80,6 +240,9 @@
           <li role="presentation">
             <a href="#chat-matrix" aria-controls="chat-matrix" role="tab" data-toggle="tab">對話長度矩陣圖</a>
           </li>
+          <li role="presentation">
+            <a href="#persona-details" aria-controls="persona-details" role="tab" data-toggle="tab">角色詳細資料</a>
+          </li>
         </ul>
         
         <!-- 頁籤內容 -->
@@ -108,6 +271,60 @@
             <div class="chart-container" style="width: 100%; height: 600px;"></div>
             <div id="debug-info" style="margin-top: 10px; font-family: monospace; font-size: 12px;"></div>
           </div>
+
+          <!-- 角色詳細資料 -->
+          <div role="tabpanel" class="tab-pane" id="persona-details">
+            <div class="persona-info">
+              <h3 style="margin: 0 0 15px 0; text-align: center;">🎭 選擇角色查看詳細資料</h3>
+              <p style="text-align: center; margin: 0; opacity: 0.9;">點擊下方角色頭像查看其基本資料、社交關係和活動統計</p>
+            </div>
+
+            <!-- 角色選擇網格 -->
+            <div class="persona-grid" id="persona-grid">
+              <!-- 將由JavaScript動態生成 -->
+            </div>
+
+            <!-- 角色詳細信息顯示區域 -->
+            <div id="persona-detail-content" style="display: none;">
+              <!-- 基本資料 -->
+              <div class="detail-section">
+                <div class="section-title">👤 基本資料</div>
+                <div class="info-grid" id="basic-info">
+                  <!-- 將由JavaScript動態生成 -->
+                </div>
+              </div>
+
+              <!-- 社交關係圖表 -->
+              <div class="detail-section">
+                <div class="section-title">💬 社交關係統計</div>
+                <div class="bar-chart" id="interaction-chart">
+                  <!-- 將由JavaScript動態生成 -->
+                </div>
+              </div>
+
+              <!-- 活動地區統計 -->
+              <div class="detail-section">
+                <div class="section-title">🏠 活動地區統計</div>
+                <div class="bar-chart" id="location-chart">
+                  <!-- 將由JavaScript動態生成 -->
+                </div>
+              </div>
+
+              <!-- 物品互動統計 -->
+              <div class="detail-section">
+                <div class="section-title">🔧 物品互動統計</div>
+                <div class="bar-chart" id="object-chart">
+                  <!-- 將由JavaScript動態生成 -->
+                </div>
+              </div>
+            </div>
+
+            <!-- 空狀態 -->
+            <div id="empty-state" class="empty-state">
+              <h4>請選擇一個角色</h4>
+              <p>點擊上方的角色頭像來查看詳細資料</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -121,10 +338,12 @@
     // 從後端獲取數據
     const interactionData = JSON.parse('{{ interaction_data | safe }}');
     const chatLengthData = JSON.parse('{{ chat_length_data | safe }}');
+    const allInteractionData = JSON.parse('{{ all_interaction_data | safe }}');
     const personaNames = {{ persona_names | tojson }};
     
     console.log('Interaction Data:', interactionData);
     console.log('Chat Length Data:', chatLengthData);
+    console.log('All Interaction Data:', allInteractionData);
     console.log('Persona Names:', personaNames);
 
     // 全局變數
@@ -132,11 +351,18 @@
     let forceDirectedG = null;
     let zoom = null;
     let simulation = null;
+    let currentSelectedPersona = null;
+
+    // 角色基本資料
+    const personaProfiles = allInteractionData.persona_profiles || {};
 
     // 當頁面載入完成後初始化圖表
     document.addEventListener('DOMContentLoaded', function() {
       // 更新統計信息
       updateStatistics();
+      
+      // 初始化角色選擇網格
+      initializePersonaGrid();
       
       // 初始化互動次數力導向圖
       createForceDirectedGraph(interactionData, "#force-directed .chart-container");
@@ -164,6 +390,264 @@
       document.getElementById('total-interactions').textContent = totalInteractions;
       document.getElementById('total-interaction-count').textContent = totalInteractionCount;
       document.getElementById('total-chat-length').textContent = totalChatLength;
+    }
+
+    // 初始化角色選擇網格
+    function initializePersonaGrid() {
+      const gridContainer = document.getElementById('persona-grid');
+      gridContainer.innerHTML = '';
+
+      personaNames.forEach(personaName => {
+        const card = document.createElement('div');
+        card.className = 'persona-card';
+        card.dataset.persona = personaName;
+        
+        card.innerHTML = `
+          <img src="/static/assets/village/agents/${personaName}/portrait.png" 
+               alt="${personaName}" 
+               class="persona-avatar"
+               onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMzAiIGZpbGw9IiM2NjdlZWEiLz4KPGV4dCB4PSIzMCIgeT0iMzUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjE0Ij7jgJo8L3RleHQ+Cjwvc3ZnPgo='">
+          <p class="persona-name">${personaName}</p>
+        `;
+
+        card.addEventListener('click', () => selectPersona(personaName));
+        gridContainer.appendChild(card);
+      });
+    }
+
+    // 選擇角色
+    function selectPersona(personaName) {
+      // 更新選中狀態
+      document.querySelectorAll('.persona-card').forEach(card => {
+        card.classList.remove('active');
+      });
+      document.querySelector(`[data-persona="${personaName}"]`).classList.add('active');
+
+      currentSelectedPersona = personaName;
+      
+      // 顯示角色詳細信息
+      showPersonaDetails(personaName);
+      
+      // 隱藏空狀態，顯示詳細內容
+      document.getElementById('empty-state').style.display = 'none';
+      document.getElementById('persona-detail-content').style.display = 'block';
+    }
+
+    // 顯示角色詳細信息
+    function showPersonaDetails(personaName) {
+      // 更新基本資料
+      updateBasicInfo(personaName);
+      
+      // 更新社交關係圖表
+      updateInteractionChart(personaName);
+      
+      // 更新活動地區統計
+      updateLocationChart(personaName);
+      
+      // 更新物品互動統計
+      updateObjectChart(personaName);
+    }
+
+    // 更新基本資料
+    function updateBasicInfo(personaName) {
+      const profile = personaProfiles[personaName] || {
+        age: "未知",
+        innate: "待探索",
+        learned: "學習中",
+        lifestyle: "生活中",
+        currently: "活動中"
+      };
+
+      const basicInfoContainer = document.getElementById('basic-info');
+      basicInfoContainer.innerHTML = `
+        <div class="info-item">
+          <div class="info-label">姓名</div>
+          <div class="info-value">${personaName}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">年齡</div>
+          <div class="info-value">${profile.age}歲</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">先天特質</div>
+          <div class="info-value">${profile.innate}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">後天特質</div>
+          <div class="info-value">${profile.learned}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">生活習慣</div>
+          <div class="info-value">${profile.lifestyle}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">當前狀態</div>
+          <div class="info-value">${profile.currently}</div>
+        </div>
+      `;
+    }
+
+    // 更新社交關係圖表
+    function updateInteractionChart(personaName) {
+      const interactions = {};
+      
+      // 從真實的對話交互數據中統計與其他角色的互動次數
+      if (allInteractionData.chat_interactions && allInteractionData.chat_interactions.links) {
+        allInteractionData.chat_interactions.links.forEach(link => {
+          if (link.source === personaName) {
+            interactions[link.target] = (interactions[link.target] || 0) + link.value;
+          } else if (link.target === personaName) {
+            interactions[link.source] = (interactions[link.source] || 0) + link.value;
+          }
+        });
+      }
+
+      // 如果沒有真實數據，從原始的interactionData中獲取
+      if (Object.keys(interactions).length === 0) {
+        interactionData.links.forEach(link => {
+          if (link.source === personaName) {
+            interactions[link.target] = (interactions[link.target] || 0) + link.value;
+          } else if (link.target === personaName) {
+            interactions[link.source] = (interactions[link.source] || 0) + link.value;
+          }
+        });
+      }
+
+      const chartContainer = document.getElementById('interaction-chart');
+      
+      if (Object.keys(interactions).length === 0) {
+        chartContainer.innerHTML = '<div class="empty-state">暫無社交互動數據</div>';
+        return;
+      }
+
+      // 獲取最大值用於計算比例
+      const maxValue = Math.max(...Object.values(interactions), 1);
+      
+      // 按互動次數排序，顯示前8個
+      const sortedInteractions = Object.entries(interactions)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 8);
+
+      chartContainer.innerHTML = sortedInteractions.map(([partner, count]) => `
+        <div class="bar-item">
+          <div class="bar-label">${partner}</div>
+          <div class="bar-visual">
+            <div class="bar-fill interaction" style="width: ${(count / maxValue * 100)}%"></div>
+          </div>
+          <div class="bar-value">${count}次</div>
+        </div>
+      `).join('');
+
+      // 添加總互動統計信息
+      const totalInteractions = Object.values(interactions).reduce((sum, count) => sum + count, 0);
+      const totalPartners = Object.keys(interactions).length;
+      
+      if (sortedInteractions.length > 0) {
+        const summaryHtml = `
+          <div style="margin-top: 15px; padding: 10px; background: #f0f8ff; border-radius: 5px; font-size: 12px; color: #666;">
+            📊 總計：與 ${totalPartners} 位角色進行了 ${totalInteractions} 次互動
+          </div>
+        `;
+        chartContainer.innerHTML += summaryHtml;
+      }
+    }
+
+    // 更新活動地區統計
+    function updateLocationChart(personaName) {
+      const locations = {};
+      
+      // 從真實數據中獲取該角色的地區交互數據
+      if (allInteractionData.location_interactions) {
+        allInteractionData.location_interactions.forEach(interaction => {
+          if (interaction.agent === personaName) {
+            locations[interaction.location] = interaction.count;
+          }
+        });
+      }
+
+      // 如果沒有真實數據，使用模擬數據
+      if (Object.keys(locations).length === 0) {
+        const sampleLocations = {
+          "咖啡廳": Math.floor(Math.random() * 50) + 10,
+          "圖書館": Math.floor(Math.random() * 40) + 5,
+          "辦公室": Math.floor(Math.random() * 60) + 15,
+          "家": Math.floor(Math.random() * 80) + 20,
+          "教室": Math.floor(Math.random() * 45) + 8,
+          "公園": Math.floor(Math.random() * 25) + 3
+        };
+        Object.assign(locations, sampleLocations);
+      }
+
+      const maxValue = Math.max(...Object.values(locations), 1);
+      const chartContainer = document.getElementById('location-chart');
+
+      const sortedLocations = Object.entries(locations)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 8); // 顯示前8個
+
+      if (sortedLocations.length === 0) {
+        chartContainer.innerHTML = '<div class="empty-state">暫無活動地區數據</div>';
+        return;
+      }
+
+      chartContainer.innerHTML = sortedLocations.map(([location, count]) => `
+        <div class="bar-item">
+          <div class="bar-label">${location}</div>
+          <div class="bar-visual">
+            <div class="bar-fill location" style="width: ${(count / maxValue * 100)}%"></div>
+          </div>
+          <div class="bar-value">${count}</div>
+        </div>
+      `).join('');
+    }
+
+    // 更新物品互動統計
+    function updateObjectChart(personaName) {
+      const objects = {};
+      
+      // 從真實數據中獲取該角色的物品交互數據
+      if (allInteractionData.object_interactions) {
+        allInteractionData.object_interactions.forEach(interaction => {
+          if (interaction.agent === personaName) {
+            objects[interaction.object] = interaction.count;
+          }
+        });
+      }
+
+      // 如果沒有真實數據，使用模擬數據
+      if (Object.keys(objects).length === 0) {
+        const sampleObjects = {
+          "電腦": Math.floor(Math.random() * 100) + 20,
+          "書籍": Math.floor(Math.random() * 60) + 10,
+          "咖啡機": Math.floor(Math.random() * 40) + 5,
+          "手機": Math.floor(Math.random() * 120) + 30,
+          "白板": Math.floor(Math.random() * 35) + 8,
+          "桌椅": Math.floor(Math.random() * 80) + 15
+        };
+        Object.assign(objects, sampleObjects);
+      }
+
+      const maxValue = Math.max(...Object.values(objects), 1);
+      const chartContainer = document.getElementById('object-chart');
+
+      const sortedObjects = Object.entries(objects)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 8); // 顯示前8個
+
+      if (sortedObjects.length === 0) {
+        chartContainer.innerHTML = '<div class="empty-state">暫無物品互動數據</div>';
+        return;
+      }
+
+      chartContainer.innerHTML = sortedObjects.map(([object, count]) => `
+        <div class="bar-item">
+          <div class="bar-label">${object}</div>
+          <div class="bar-visual">
+            <div class="bar-fill object" style="width: ${(count / maxValue * 100)}%"></div>
+          </div>
+          <div class="bar-value">${count}</div>
+        </div>
+      `).join('');
     }
 
     // 創建力導向圖
@@ -287,7 +771,7 @@
         .attr("pointer-events", "none")
         .attr("font-weight", "bold");
 
-      // 添加hover效果
+      // 添加hover效果和點擊事件
       node.on("mouseover", function(event, d) {
         d3.select(this).select("circle")
           .transition()
@@ -326,12 +810,18 @@
           .duration(200)
           .attr("x", -25)
           .attr("y", -25)
-          .attr("width", 50)
           .attr("height", 50);
         
         // 恢復所有連線
         link.style("stroke-opacity", 0.6);
         linkText.style("opacity", 1);
+      })
+      .on("click", function(event, d) {
+        // 點擊節點時切換到角色詳細資料頁籤並選中該角色
+        $('a[href="#persona-details"]').tab('show');
+        setTimeout(() => {
+          selectPersona(d.id);
+        }, 100);
       });
 
       // 模擬動畫
@@ -490,11 +980,19 @@
             .attr("fill", value > 0 ? color(value) : "#f8f8f8")
             .attr("stroke", "#ccc")
             .attr("stroke-width", 1)
+            .style("cursor", "pointer")
             .on("mouseover", function() {
               d3.select(this).attr("stroke", "#333").attr("stroke-width", 2);
             })
             .on("mouseout", function() {
               d3.select(this).attr("stroke", "#ccc").attr("stroke-width", 1);
+            })
+            .on("click", function() {
+              // 點擊矩陣單元格時切換到角色詳細資料頁籤並選中源角色
+              $('a[href="#persona-details"]').tab('show');
+              setTimeout(() => {
+                selectPersona(source);
+              }, 100);
             })
             .append("title")
             .text(`${source} ↔ ${target}: ${value} 字符`);

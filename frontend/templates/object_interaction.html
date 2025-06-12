@@ -171,8 +171,7 @@
             <div class="controls">
               <button id="object-zoom-in" class="btn btn-control">🔍 放大</button>
               <button id="object-zoom-out" class="btn btn-control">🔍 縮小</button>
-              <button id="object-reset" class="btn btn-control">🎯 重置</button>
-              <button id="object-animate" class="btn btn-control">✨ 動畫</button>
+              <button id="object-reset" class="btn btn-control">重置</button>
             </div>
             <div class="chart-container" id="object-chart" style="height: 700px;"></div>
           </div>
@@ -182,8 +181,7 @@
             <div class="controls">
               <button id="location-zoom-in" class="btn btn-control">🔍 放大</button>
               <button id="location-zoom-out" class="btn btn-control">🔍 縮小</button>
-              <button id="location-reset" class="btn btn-control">🎯 重置</button>
-              <button id="location-animate" class="btn btn-control">✨ 動畫</button>
+              <button id="location-reset" class="btn btn-control"> 重置</button>
             </div>
             <div class="chart-container" id="location-chart" style="height: 700px;"></div>
           </div>
@@ -471,7 +469,7 @@
         .attr("font-size", "14px")
         .attr("font-weight", "bold")
         .attr("fill", "#2C3E50")
-        .text("🤖 AI 智能體");
+        .text("");
       
       g.append("text")
         .attr("x", centerX)
@@ -773,7 +771,7 @@
         .attr("font-size", "14px")
         .attr("font-weight", "bold")
         .attr("fill", "#2C3E50")
-        .text("🤖 AI 智能體");
+        .text(" ");
       
       g.append("text")
         .attr("x", centerX)
@@ -782,7 +780,7 @@
         .attr("font-size", "14px")
         .attr("font-weight", "bold")
         .attr("fill", "#2C3E50")
-        .text("🏠 活動地區");
+        .text("");
       
       // 添加過濾提示
       if (data.length > filteredData.length) {
