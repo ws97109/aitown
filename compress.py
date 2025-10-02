@@ -5,7 +5,10 @@ import collections
 from datetime import datetime
 
 from modules.maze import Maze
-from start import personas
+from start import load_personas_from_config
+
+# 載入AI居民列表
+personas = load_personas_from_config()
 
 file_markdown = "simulation.md"
 file_movement = "movement.json"

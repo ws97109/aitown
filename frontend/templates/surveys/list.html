@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>問卷管理系統</h2>
+                <div>
+                    <a href="/surveys/create" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> 創建新問卷
+                    </a>
+                    <a href="/" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> 返回主頁
+                    </a>
+                </div>
+            </div>
+
+            {% if surveys %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">問卷列表 (共 {{ surveys|length }} 個問卷)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>問卷標題</th>
+                                    <th>描述</th>
+                                    <th>問題數量</th>
+                                    <th>創建時間</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for survey in surveys %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ survey.title }}</strong>
+                                    </td>
+                                    <td>
+                                        {{ survey.description[:50] }}
+                                        {% if survey.description|length > 50 %}...{% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-info">{{ survey.question_count }} 題</span>
+                                    </td>
+                                    <td>
+                                        {{ survey.created_at[:19].replace('T', ' ') }}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="/surveys/{{ survey.survey_id }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> 查看
+                                            </a>
+                                            <button class="btn btn-sm btn-outline-success" 
+                                                    onclick="fillSurvey('{{ survey.survey_id }}', '{{ survey.title }}')">
+                                                <i class="fas fa-robot"></i> AI填寫
+                                            </button>
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-info dropdown-toggle" 
+                                                        type="button" data-toggle="dropdown">
+                                                    <i class="fas fa-download"></i> 匯出
+                                                </button>
+                                                <div class="dropdown-menu">
+                                                    <a class="dropdown-item" 
+                                                       href="/surveys/{{ survey.survey_id }}/export?format=csv">
+                                                        <i class="fas fa-file-csv"></i> CSV格式
+                                                    </a>
+                                                    <a class="dropdown-item" 
+                                                       href="/surveys/{{ survey.survey_id }}/export?format=json">
+                                                        <i class="fas fa-file-code"></i> JSON格式
+                                                    </a>
+                                                    <a class="dropdown-item" 
+                                                       href="/surveys/{{ survey.survey_id }}/export?format=excel">
+                                                        <i class="fas fa-file-excel"></i> Excel格式
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">尚無問卷</h4>
+                    <p class="text-muted">開始創建您的第一個問卷，讓AI居民參與調查！</p>
+                    <a href="/surveys/create" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> 創建問卷
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- AI填寫進度模態框 -->
+    <div class="modal fade" id="fillProgressModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">AI居民填寫問卷</h5>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="sr-only">處理中...</span>
+                    </div>
+                    <p id="fillStatus">正在讓AI居民填寫問卷，請稍候...</p>
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block js_content %}
+<script>
+function fillSurvey(surveyId, surveyTitle) {
+    // 顯示進度模態框
+    $('#fillProgressModal').modal('show');
+    
+    // 模擬進度更新
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+        progress += 10;
+        $('.progress-bar').css('width', progress + '%');
+        
+        if (progress >= 90) {
+            clearInterval(progressInterval);
+        }
+    }, 200);
+    
+    // 發送AI填寫請求
+    fetch(`/surveys/${surveyId}/fill`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        clearInterval(progressInterval);
+        $('.progress-bar').css('width', '100%');
+        
+        if (data.success) {
+            $('#fillStatus').html(`
+                <i class="fas fa-check-circle text-success"></i><br>
+                成功！${data.response_count} 個AI居民已完成問卷填寫
+            `);
+            $('.spinner-border').hide();
+            
+            // 3秒後關閉模態框並刷新頁面
+            setTimeout(() => {
+                $('#fillProgressModal').modal('hide');
+                location.reload();
+            }, 3000);
+        } else {
+            $('#fillStatus').html(`
+                <i class="fas fa-exclamation-triangle text-warning"></i><br>
+                填寫過程中出現問題：${data.error}
+            `);
+            $('.spinner-border').hide();
+        }
+    })
+    .catch(error => {
+        clearInterval(progressInterval);
+        $('#fillStatus').html(`
+            <i class="fas fa-times-circle text-danger"></i><br>
+            請求失敗：${error.message}
+        `);
+        $('.spinner-border').hide();
+    });
+}
+
+// 頁面載入完成後的初始化
+$(document).ready(function() {
+    // 初始化下拉選單
+    $('.dropdown-toggle').dropdown();
+    
+    // 為表格添加排序功能（如果需要）
+    $('table').addClass('table-sortable');
+});
+</script>
+{% endblock js_content %}

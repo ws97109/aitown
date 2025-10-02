@@ -1,0 +1,964 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>創建問卷</h2>
+                <a href="/surveys" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> 返回問卷列表
+                </a>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                                <li class="nav-item">
+                                    <a class="nav-link active" id="manual-tab" data-toggle="tab" 
+                                       href="#manual" role="tab">手動創建</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" id="url-tab" data-toggle="tab" 
+                                       href="#url-import" role="tab">URL匯入</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" id="json-tab" data-toggle="tab" 
+                                       href="#json-import" role="tab">JSON匯入</a>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="card-body">
+                            <div class="tab-content">
+                                <!-- 手動創建 -->
+                                <div class="tab-pane fade show active" id="manual" role="tabpanel">
+                                    <form method="POST" id="manualForm">
+                                        <input type="hidden" name="import_type" value="manual">
+                                        
+                                        <!-- 問卷基本信息 -->
+                                        <div class="card mb-4">
+                                            <div class="card-header bg-primary text-white">
+                                                <h6 class="mb-0"><i class="fas fa-info-circle"></i> 問卷基本信息</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-8">
+                                                        <div class="form-group">
+                                                            <label for="title" class="font-weight-bold">問卷標題 *</label>
+                                                            <input type="text" class="form-control form-control-lg" id="title" name="title" 
+                                                                   placeholder="例如：AI居民生活滿意度調查" required>
+                                                            <small class="form-text text-muted">簡潔明瞭的標題有助於提高回應率</small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="form-group">
+                                                            <label class="font-weight-bold">問卷統計</label>
+                                                            <div class="bg-light p-3 rounded">
+                                                                <div class="text-center">
+                                                                    <span class="badge badge-secondary" id="question-count">0</span>
+                                                                    <small class="d-block text-muted">問題總數</small>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="form-group">
+                                                    <label for="description" class="font-weight-bold">問卷描述</label>
+                                                    <textarea class="form-control" id="description" name="description" 
+                                                              rows="3" placeholder="請詳細描述這個問卷的目的、調查範圍和填寫說明"></textarea>
+                                                    <small class="form-text text-muted">詳細的描述有助於AI居民理解問卷內容並給出更準確的回應</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- 問題設定區域 -->
+                                        <div class="card mb-4">
+                                            <div class="card-header bg-success text-white">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="mb-0"><i class="fas fa-question-circle"></i> 問題設定</h6>
+                                                    <div>
+                                                        <button type="button" class="btn btn-light btn-sm" 
+                                                                onclick="addQuestion('single_choice')">
+                                                            <i class="fas fa-dot-circle"></i> 單選題
+                                                        </button>
+                                                        <button type="button" class="btn btn-light btn-sm" 
+                                                                onclick="addQuestion('multiple_choice')">
+                                                            <i class="fas fa-check-square"></i> 多選題
+                                                        </button>
+                                                        <button type="button" class="btn btn-light btn-sm" 
+                                                                onclick="addQuestion('rating')">
+                                                            <i class="fas fa-star"></i> 評分題
+                                                        </button>
+                                                        <button type="button" class="btn btn-light btn-sm" 
+                                                                onclick="addQuestion('text')">
+                                                            <i class="fas fa-edit"></i> 文字題
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card-body" id="questions-container">
+                                                <div class="text-center text-muted py-4" id="empty-questions-hint">
+                                                    <i class="fas fa-plus-circle fa-3x mb-3 text-secondary"></i>
+                                                    <h5>還沒有任何問題</h5>
+                                                    <p>點擊上方按鈕開始添加問題，或使用下方的「快速創建」功能</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- 操作按鈕 -->
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <h6 class="text-muted">快速創建</h6>
+                                                        <button type="button" class="btn btn-outline-info btn-block" 
+                                                                onclick="createTemplateBasic()">
+                                                            <i class="fas fa-bolt"></i> 基礎滿意度問卷
+                                                        </button>
+                                                        <button type="button" class="btn btn-outline-warning btn-block mt-2" 
+                                                                onclick="createTemplateDetailed()">
+                                                            <i class="fas fa-chart-bar"></i> 詳細調查問卷
+                                                        </button>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <h6 class="text-muted">操作</h6>
+                                                        <button type="button" class="btn btn-outline-secondary btn-block" 
+                                                                onclick="previewSurvey()">
+                                                            <i class="fas fa-eye"></i> 預覽問卷
+                                                        </button>
+                                                        <button type="submit" class="btn btn-primary btn-block mt-2" 
+                                                                id="createSurveyBtn" disabled>
+                                                            <i class="fas fa-save"></i> 創建問卷
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+
+                                <!-- URL匯入 -->
+                                <div class="tab-pane fade" id="url-import" role="tabpanel">
+                                    <form method="POST" id="urlForm">
+                                        <input type="hidden" name="import_type" value="url">
+                                        
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle"></i>
+                                            支援從Google Forms或其他問卷網址匯入問卷結構
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label for="import_url">問卷網址 *</label>
+                                            <input type="url" class="form-control" id="import_url" name="import_url" 
+                                                   placeholder="請輸入Google Forms或其他問卷網址" required>
+                                            <small class="form-text text-muted">
+                                                例如：https://docs.google.com/forms/d/your-form-id/viewform
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="text-right">
+                                            <button type="submit" class="btn btn-success">
+                                                <i class="fas fa-download"></i> 匯入問卷
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+
+                                <!-- JSON匯入 -->
+                                <div class="tab-pane fade" id="json-import" role="tabpanel">
+                                    <form method="POST" id="jsonForm">
+                                        <input type="hidden" name="import_type" value="json">
+                                        
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle"></i>
+                                            貼上JSON格式的問卷數據以快速創建問卷
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label for="json_data">JSON數據 *</label>
+                                            <textarea class="form-control" id="json_data" name="json_data" 
+                                                      rows="15" placeholder="請貼上JSON格式的問卷數據" required></textarea>
+                                            <small class="form-text text-muted">
+                                                <button type="button" class="btn btn-link btn-sm p-0" 
+                                                        onclick="showJSONExample()">
+                                                    查看JSON格式範例
+                                                </button>
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="text-right">
+                                            <button type="button" class="btn btn-outline-secondary" 
+                                                    onclick="validateJSON()">
+                                                <i class="fas fa-check"></i> 驗證JSON
+                                            </button>
+                                            <button type="submit" class="btn btn-success">
+                                                <i class="fas fa-upload"></i> 匯入問卷
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 側邊欄說明 -->
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">問卷創建說明</h6>
+                        </div>
+                        <div class="card-body">
+                            <h6>支援的問題類型：</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-dot-circle text-primary"></i> <strong>單選題</strong> - 只能選擇一個答案</li>
+                                <li><i class="fas fa-check-square text-success"></i> <strong>多選題</strong> - 可選擇多個答案</li>
+                                <li><i class="fas fa-star text-warning"></i> <strong>評分題</strong> - 1-5分評分</li>
+                                <li><i class="fas fa-edit text-info"></i> <strong>文字題</strong> - 開放式文字回應</li>
+                            </ul>
+                            
+                            <hr>
+                            
+                            <h6>匯入方式：</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-hand-point-right text-primary"></i> <strong>手動創建</strong> - 逐一設定問題</li>
+                                <li><i class="fas fa-link text-success"></i> <strong>URL匯入</strong> - 從Google Forms匯入</li>
+                                <li><i class="fas fa-code text-info"></i> <strong>JSON匯入</strong> - 使用JSON格式快速匯入</li>
+                            </ul>
+                            
+                            <hr>
+                            
+                            <h6>AI居民特色：</h6>
+                            <p class="small text-muted">
+                                系統會根據9個AI居民的不同性格和背景，
+                                智能生成符合他們特性的問卷回應，
+                                讓您獲得更真實的模擬調查數據。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JSON範例模態框 -->
+<div class="modal fade" id="jsonExampleModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">JSON格式範例</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <pre><code class="language-json" id="jsonExample"></code></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="useJSONExample()">
+                    使用此範例
+                </button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    關閉
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block js_content %}
+<script>
+let questionCount = 0;
+
+// 新增問題（支援指定類型）
+function addQuestion(type = 'single_choice') {
+    questionCount++;
+    updateQuestionCount();
+    hideEmptyHint();
+    
+    const container = document.getElementById('questions-container');
+    
+    const questionDiv = document.createElement('div');
+    questionDiv.className = 'card mb-3 question-card';
+    questionDiv.id = `question-${questionCount}`;
+    questionDiv.style.opacity = '0';
+    questionDiv.style.transform = 'translateY(20px)';
+    
+    const typeIcon = getTypeIcon(type);
+    const typeName = getTypeName(type);
+    
+    questionDiv.innerHTML = `
+        <div class="card-header border-left-${getTypeColor(type)}" style="border-left-width: 4px !important;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0">
+                        <span class="badge badge-${getTypeColor(type)} mr-2">${typeIcon}</span>
+                        問題 ${questionCount} - ${typeName}
+                    </h6>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary mr-2" 
+                            onclick="duplicateQuestion(${questionCount})" title="複製問題">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                            onclick="removeQuestion(${questionCount})" title="刪除問題">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="form-group">
+                <label class="font-weight-bold">問題內容 *</label>
+                <textarea class="form-control" name="question_text_${questionCount}" 
+                         rows="2" placeholder="${getPlaceholderText(type)}" required></textarea>
+                <small class="form-text text-muted">${getHelpText(type)}</small>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label class="font-weight-bold">問題類型</label>
+                        <select class="form-control" name="question_type_${questionCount}" 
+                                onchange="toggleOptions(${questionCount})">
+                            <option value="single_choice" ${type === 'single_choice' ? 'selected' : ''}>
+                                <i class="fas fa-dot-circle"></i> 單選題
+                            </option>
+                            <option value="multiple_choice" ${type === 'multiple_choice' ? 'selected' : ''}>
+                                <i class="fas fa-check-square"></i> 多選題
+                            </option>
+                            <option value="rating" ${type === 'rating' ? 'selected' : ''}>
+                                <i class="fas fa-star"></i> 評分題
+                            </option>
+                            <option value="text" ${type === 'text' ? 'selected' : ''}>
+                                <i class="fas fa-edit"></i> 文字題
+                            </option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="font-weight-bold">設定</label>
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" 
+                                   name="question_required_${questionCount}" id="required-${questionCount}" checked>
+                            <label class="custom-control-label" for="required-${questionCount}">必填問題</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="options-container" id="options-${questionCount}" 
+                 style="display: ${(type === 'single_choice' || type === 'multiple_choice') ? 'block' : 'none'}">
+                <label class="font-weight-bold">選項設定</label>
+                <div class="options-list" id="options-list-${questionCount}">
+                    <!-- 選項將在這裡添加 -->
+                </div>
+                <button type="button" class="btn btn-outline-primary btn-sm" 
+                        onclick="addOption(${questionCount})">
+                    <i class="fas fa-plus"></i> 新增選項
+                </button>
+            </div>
+            
+            ${type === 'rating' ? `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                評分題將使用 1-5 分評分系統，AI居民會根據問題內容給出相應評分。
+            </div>
+            ` : ''}
+        </div>
+    `;
+    
+    container.appendChild(questionDiv);
+    
+    // 添加動畫效果
+    setTimeout(() => {
+        questionDiv.style.transition = 'all 0.3s ease';
+        questionDiv.style.opacity = '1';
+        questionDiv.style.transform = 'translateY(0)';
+    }, 50);
+    
+    // 為選擇題類型添加預設選項
+    if (type === 'single_choice' || type === 'multiple_choice') {
+        setTimeout(() => {
+            addOption(questionCount, '選項一');
+            addOption(questionCount, '選項二');
+        }, 100);
+    }
+    
+    updateCreateButton();
+}
+
+// 輔助函數
+function getTypeIcon(type) {
+    const icons = {
+        'single_choice': '<i class="fas fa-dot-circle"></i>',
+        'multiple_choice': '<i class="fas fa-check-square"></i>',
+        'rating': '<i class="fas fa-star"></i>',
+        'text': '<i class="fas fa-edit"></i>'
+    };
+    return icons[type] || icons['single_choice'];
+}
+
+function getTypeName(type) {
+    const names = {
+        'single_choice': '單選題',
+        'multiple_choice': '多選題',
+        'rating': '評分題',
+        'text': '文字題'
+    };
+    return names[type] || names['single_choice'];
+}
+
+function getTypeColor(type) {
+    const colors = {
+        'single_choice': 'primary',
+        'multiple_choice': 'success',
+        'rating': 'warning',
+        'text': 'info'
+    };
+    return colors[type] || colors['single_choice'];
+}
+
+function getPlaceholderText(type) {
+    const placeholders = {
+        'single_choice': '例如：您對我們的服務滿意嗎？',
+        'multiple_choice': '例如：您最常使用哪些功能？（可多選）',
+        'rating': '例如：請為我們的服務品質評分（1-5分）',
+        'text': '例如：請分享您的使用心得或建議'
+    };
+    return placeholders[type] || placeholders['single_choice'];
+}
+
+function getHelpText(type) {
+    const helps = {
+        'single_choice': '受訪者只能選擇一個答案',
+        'multiple_choice': '受訪者可以選擇多個答案',
+        'rating': 'AI居民會給出1-5分的評分',
+        'text': 'AI居民會根據問題內容給出文字回應'
+    };
+    return helps[type] || helps['single_choice'];
+}
+
+// 更新問題統計
+function updateQuestionCount() {
+    const count = document.querySelectorAll('.question-card').length;
+    document.getElementById('question-count').textContent = count;
+}
+
+// 隱藏空白提示
+function hideEmptyHint() {
+    const hint = document.getElementById('empty-questions-hint');
+    if (hint) {
+        hint.style.display = 'none';
+    }
+}
+
+// 顯示空白提示
+function showEmptyHint() {
+    const hint = document.getElementById('empty-questions-hint');
+    if (hint && document.querySelectorAll('.question-card').length === 0) {
+        hint.style.display = 'block';
+    }
+}
+
+// 更新創建按鈕狀態
+function updateCreateButton() {
+    const btn = document.getElementById('createSurveyBtn');
+    const hasQuestions = document.querySelectorAll('.question-card').length > 0;
+    const hasTitle = document.getElementById('title').value.trim().length > 0;
+    
+    btn.disabled = !(hasQuestions && hasTitle);
+}
+
+// 移除問題
+function removeQuestion(questionId) {
+    const questionDiv = document.getElementById(`question-${questionId}`);
+    
+    // 添加移除動畫
+    questionDiv.style.transition = 'all 0.3s ease';
+    questionDiv.style.opacity = '0';
+    questionDiv.style.transform = 'translateX(-100%)';
+    
+    setTimeout(() => {
+        questionDiv.remove();
+        updateQuestionCount();
+        updateCreateButton();
+        showEmptyHint();
+    }, 300);
+}
+
+// 複製問題
+function duplicateQuestion(questionId) {
+    const originalDiv = document.getElementById(`question-${questionId}`);
+    const questionText = originalDiv.querySelector('textarea').value;
+    const questionType = originalDiv.querySelector('select').value;
+    
+    addQuestion(questionType);
+    
+    // 複製問題內容
+    setTimeout(() => {
+        const newQuestionText = document.querySelector(`textarea[name="question_text_${questionCount}"]`);
+        newQuestionText.value = questionText + ' (複製)';
+        
+        // 複製選項（如果是選擇題）
+        if (questionType === 'single_choice' || questionType === 'multiple_choice') {
+            const originalOptions = originalDiv.querySelectorAll('.options-list input');
+            const newOptionsList = document.getElementById(`options-list-${questionCount}`);
+            
+            // 清空預設選項
+            newOptionsList.innerHTML = '';
+            
+            originalOptions.forEach(option => {
+                addOption(questionCount, option.value);
+            });
+        }
+    }, 200);
+}
+
+// 切換選項顯示
+function toggleOptions(questionId) {
+    const typeSelect = document.querySelector(`select[name="question_type_${questionId}"]`);
+    const optionsContainer = document.getElementById(`options-${questionId}`);
+    const cardHeader = document.querySelector(`#question-${questionId} .card-header`);
+    
+    // 更新卡片樣式
+    const typeColor = getTypeColor(typeSelect.value);
+    cardHeader.className = `card-header border-left-${typeColor}`;
+    
+    // 更新問題類型標籤
+    const badge = cardHeader.querySelector('.badge');
+    badge.className = `badge badge-${typeColor} mr-2`;
+    badge.innerHTML = getTypeIcon(typeSelect.value);
+    
+    // 更新問題標題
+    const title = cardHeader.querySelector('h6');
+    title.innerHTML = `
+        <span class="badge badge-${typeColor} mr-2">${getTypeIcon(typeSelect.value)}</span>
+        問題 ${questionId} - ${getTypeName(typeSelect.value)}
+    `;
+    
+    if (typeSelect.value === 'single_choice' || typeSelect.value === 'multiple_choice') {
+        optionsContainer.style.display = 'block';
+        // 如果沒有選項，添加預設選項
+        const optionsList = document.getElementById(`options-list-${questionId}`);
+        if (optionsList.children.length === 0) {
+            addOption(questionId, '選項一');
+            addOption(questionId, '選項二');
+        }
+    } else {
+        optionsContainer.style.display = 'none';
+    }
+}
+
+// 新增選項
+function addOption(questionId, defaultValue = '') {
+    const optionsList = document.getElementById(`options-list-${questionId}`);
+    const optionCount = optionsList.children.length + 1;
+    
+    const optionDiv = document.createElement('div');
+    optionDiv.className = 'input-group mb-2';
+    optionDiv.innerHTML = `
+        <div class="input-group-prepend">
+            <span class="input-group-text">${optionCount}</span>
+        </div>
+        <input type="text" class="form-control" name="option_${questionId}_${optionCount}" 
+               placeholder="請輸入選項內容" value="${defaultValue}">
+        <div class="input-group-append">
+            <button type="button" class="btn btn-outline-danger" 
+                    onclick="removeOption(this)" title="刪除選項">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    
+    optionsList.appendChild(optionDiv);
+}
+
+// 移除選項
+function removeOption(button) {
+    const optionDiv = button.closest('.input-group');
+    const optionsList = optionDiv.parentElement;
+    
+    optionDiv.remove();
+    
+    // 重新編號選項
+    const options = optionsList.querySelectorAll('.input-group');
+    options.forEach((option, index) => {
+        const number = option.querySelector('.input-group-text');
+        number.textContent = index + 1;
+    });
+}
+
+// 創建基礎滿意度問卷模板
+function createTemplateBasic() {
+    // 清空現有問題
+    document.querySelectorAll('.question-card').forEach(card => card.remove());
+    questionCount = 0;
+    
+    document.getElementById('title').value = 'AI居民生活滿意度調查';
+    document.getElementById('description').value = '了解AI居民對社區生活的滿意度和需求，以改善社區環境和服務品質。';
+    
+    // 添加基礎問題
+    addQuestion('text');
+    document.querySelector(`textarea[name="question_text_${questionCount}"]`).value = '請問您的姓名？';
+    
+    addQuestion('single_choice');
+    document.querySelector(`textarea[name="question_text_${questionCount}"]`).value = '您對目前的社區生活環境滿意嗎？';
+    setTimeout(() => {
+        const optionsList = document.getElementById(`options-list-${questionCount}`);
+        optionsList.innerHTML = '';
+        addOption(questionCount, '非常滿意');
+        addOption(questionCount, '滿意');
+        addOption(questionCount, '普通');
+        addOption(questionCount, '不滿意');
+        addOption(questionCount, '非常不滿意');
+    }, 100);
+    
+    addQuestion('rating');
+    document.querySelector(`textarea[name="question_text_${questionCount}"]`).value = '請為社區的整體氛圍評分（1-5分）';
+    
+    addQuestion('text');
+    document.querySelector(`textarea[name="question_text_${questionCount}"]`).value = '您希望社區在哪些方面有所改善？';
+    
+    updateCreateButton();
+}
+
+// 創建詳細調查問卷模板
+function createTemplateDetailed() {
+    // 清空現有問題
+    document.querySelectorAll('.question-card').forEach(card => card.remove());
+    questionCount = 0;
+    
+    document.getElementById('title').value = 'AI居民詳細生活狀況調查';
+    document.getElementById('description').value = '深入了解AI居民的生活狀況、興趣愛好、社交關係和未來期望，為社區發展提供參考。';
+    
+    // 基本信息
+    addQuestion('text');
+    document.querySelector(`textarea[name="question_text_${questionCount}"]`).value = '請問您的姓名？';
+    
+    addQuestion('single_choice');
+    document.querySelector(`textarea[name="question_text_${questionCount}"]`).value = '您的年齡範圍？';
+    setTimeout(() => {
+        const optionsList = document.getElementById(`options-list-${questionCount}`);
+        optionsList.innerHTML = '';
+        addOption(questionCount, '18-25歲');
+        addOption(questionCount, '26-35歲');
+        addOption(questionCount, '36-45歲');
+        addOption(questionCount, '46歲以上');
+    }, 100);
+    
+    // 生活狀況
+    addQuestion('multiple_choice');
+    document.querySelector(`textarea[name="question_text_${questionCount}"]`).value = '您最常參與的活動有哪些？（可多選）';
+    setTimeout(() => {
+        const optionsList = document.getElementById(`options-list-${questionCount}`);
+        optionsList.innerHTML = '';
+        addOption(questionCount, '社交聊天');
+        addOption(questionCount, '學習研究');
+        addOption(questionCount, '休閒娛樂');
+        addOption(questionCount, '工作討論');
+        addOption(questionCount, '運動健身');
+        addOption(questionCount, '藝術創作');
+    }, 100);
+    
+    addQuestion('rating');
+    document.querySelector(`textarea[name="question_text_${questionCount}"]`).value = '您對目前的工作/學習狀況滿意度？';
+    
+    addQuestion('text');
+    document.querySelector(`textarea[name="question_text_${questionCount}"]`).value = '請描述您理想中的生活狀態';
+    
+    updateCreateButton();
+}
+
+// 預覽問卷
+function previewSurvey() {
+    const title = document.getElementById('title').value;
+    const description = document.getElementById('description').value;
+    const questions = [];
+    
+    document.querySelectorAll('.question-card').forEach((card, index) => {
+        const questionId = card.id.split('-')[1];
+        const questionText = card.querySelector('textarea').value;
+        const questionType = card.querySelector('select').value;
+        const required = card.querySelector('input[type="checkbox"]').checked;
+        
+        const question = {
+            id: index + 1,
+            text: questionText,
+            type: questionType,
+            required: required
+        };
+        
+        if (questionType === 'single_choice' || questionType === 'multiple_choice') {
+            const options = [];
+            card.querySelectorAll('.options-list input').forEach(input => {
+                if (input.value.trim()) {
+                    options.push(input.value.trim());
+                }
+            });
+            question.options = options;
+        }
+        
+        questions.push(question);
+    });
+    
+    // 創建預覽窗口
+    const previewWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
+    previewWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>問卷預覽 - ${title}</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+        </head>
+        <body class="bg-light">
+            <div class="container mt-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0"><i class="fas fa-eye"></i> 問卷預覽</h4>
+                    </div>
+                    <div class="card-body">
+                        <h2>${title}</h2>
+                        <p class="text-muted">${description}</p>
+                        <hr>
+                        <form>
+                            ${questions.map(q => generateQuestionPreview(q)).join('')}
+                            <div class="text-center mt-4">
+                                <button type="button" class="btn btn-primary" disabled>
+                                    <i class="fas fa-paper-plane"></i> 提交問卷（預覽模式）
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+    `);
+}
+
+function generateQuestionPreview(question) {
+    let html = `
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="card-title">
+                    問題 ${question.id}
+                    ${question.required ? '<span class="text-danger">*</span>' : ''}
+                </h6>
+                <p class="card-text">${question.text}</p>
+    `;
+    
+    switch (question.type) {
+        case 'single_choice':
+            question.options.forEach((option, index) => {
+                html += `
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="q${question.id}" disabled>
+                        <label class="form-check-label">${option}</label>
+                    </div>
+                `;
+            });
+            break;
+            
+        case 'multiple_choice':
+            question.options.forEach((option, index) => {
+                html += `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" disabled>
+                        <label class="form-check-label">${option}</label>
+                    </div>
+                `;
+            });
+            break;
+            
+        case 'rating':
+            html += `
+                <div class="form-group">
+                    <div class="btn-group btn-group-toggle" data-toggle="buttons">
+                        ${[1,2,3,4,5].map(i => `
+                            <label class="btn btn-outline-warning">
+                                <input type="radio" name="q${question.id}" disabled> ${i}
+                            </label>
+                        `).join('')}
+                    </div>
+                    <small class="form-text text-muted">1分（非常不滿意）- 5分（非常滿意）</small>
+                </div>
+            `;
+            break;
+            
+        case 'text':
+            html += `
+                <textarea class="form-control" rows="3" placeholder="請輸入您的回應..." disabled></textarea>
+            `;
+            break;
+    }
+    
+    html += `
+            </div>
+        </div>
+    `;
+    
+    return html;
+}
+
+// 顯示JSON範例
+function showJSONExample() {
+    const example = {
+        "title": "AI居民滿意度調查",
+        "description": "針對虛擬社區AI居民的滿意度調查",
+        "questions": [
+            {
+                "type": "text",
+                "text": "請問您的姓名？",
+                "required": true
+            },
+            {
+                "type": "single_choice",
+                "text": "您對目前的生活環境滿意嗎？",
+                "options": ["非常滿意", "滿意", "普通", "不滿意", "非常不滿意"],
+                "required": true
+            },
+            {
+                "type": "multiple_choice", 
+                "text": "您最常參與的活動有？（可多選）",
+                "options": ["社交聊天", "學習研究", "休閒娛樂", "工作討論", "其他"],
+                "required": false
+            },
+            {
+                "type": "rating",
+                "text": "請為社區的整體氛圍評分（1-5分）",
+                "required": true
+            }
+        ]
+    };
+    
+    document.getElementById('jsonExample').textContent = JSON.stringify(example, null, 2);
+    $('#jsonExampleModal').modal('show');
+}
+
+// 使用JSON範例
+function useJSONExample() {
+    const example = document.getElementById('jsonExample').textContent;
+    document.getElementById('json_data').value = example;
+    $('#jsonExampleModal').modal('hide');
+}
+
+// 驗證JSON
+function validateJSON() {
+    const jsonData = document.getElementById('json_data').value;
+    try {
+        const parsed = JSON.parse(jsonData);
+        
+        // 基本驗證
+        if (!parsed.title) {
+            alert('JSON數據缺少 title 欄位');
+            return;
+        }
+        
+        if (!parsed.questions || !Array.isArray(parsed.questions)) {
+            alert('JSON數據缺少 questions 陣列');
+            return;
+        }
+        
+        alert('✓ JSON格式驗證通過！');
+    } catch (error) {
+        alert('❌ JSON格式錯誤：' + error.message);
+    }
+}
+
+// 頁面初始化
+$(document).ready(function() {
+    // 監聽標題輸入
+    $('#title').on('input', function() {
+        updateCreateButton();
+    });
+    
+    // 表單提交處理
+    $('#manualForm').on('submit', function(e) {
+        const hasQuestions = document.querySelectorAll('.question-card').length > 0;
+        const hasTitle = document.getElementById('title').value.trim().length > 0;
+        
+        if (!hasQuestions) {
+            e.preventDefault();
+            alert('請至少添加一個問題！');
+            return;
+        }
+        
+        if (!hasTitle) {
+            e.preventDefault();
+            alert('請輸入問卷標題！');
+            return;
+        }
+        
+        // 驗證問題內容
+        let hasEmptyQuestion = false;
+        document.querySelectorAll('.question-card').forEach(card => {
+            const questionText = card.querySelector('textarea').value.trim();
+            if (!questionText) {
+                hasEmptyQuestion = true;
+            }
+        });
+        
+        if (hasEmptyQuestion) {
+            e.preventDefault();
+            alert('請確保所有問題都有內容！');
+            return;
+        }
+        
+        // 顯示提交中狀態
+        const submitBtn = document.getElementById('createSurveyBtn');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 創建中...';
+        submitBtn.disabled = true;
+    });
+    
+    // 添加鍵盤快捷鍵
+    $(document).on('keydown', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+            switch(e.which) {
+                case 49: // Ctrl+1 - 單選題
+                    e.preventDefault();
+                    addQuestion('single_choice');
+                    break;
+                case 50: // Ctrl+2 - 多選題
+                    e.preventDefault();
+                    addQuestion('multiple_choice');
+                    break;
+                case 51: // Ctrl+3 - 評分題
+                    e.preventDefault();
+                    addQuestion('rating');
+                    break;
+                case 52: // Ctrl+4 - 文字題
+                    e.preventDefault();
+                    addQuestion('text');
+                    break;
+            }
+        }
+    });
+    
+    // 顯示快捷鍵提示
+    $('body').append(`
+        <div class="position-fixed" style="bottom: 20px; right: 20px; z-index: 1000;">
+            <div class="card bg-dark text-white" style="width: 250px; opacity: 0.8;">
+                <div class="card-body p-2">
+                    <small>
+                        <strong>快捷鍵：</strong><br>
+                        Ctrl+1: 單選題<br>
+                        Ctrl+2: 多選題<br>
+                        Ctrl+3: 評分題<br>
+                        Ctrl+4: 文字題
+                    </small>
+                </div>
+            </div>
+        </div>
+    `);
+});
+</script>
+{% endblock js_content %}

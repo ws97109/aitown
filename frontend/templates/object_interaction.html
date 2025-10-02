@@ -118,6 +118,18 @@
       color: #2C3E50;
       margin-bottom: 20px;
     }
+
+    .debug-info {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 5px;
+      padding: 10px;
+      margin: 10px 0;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
   </style>
 </head>
 
@@ -129,6 +141,13 @@
         <h2 class="text-center" style="color: #667eea; margin: 20px 0; font-weight: bold;">
           🤖 AI 智能體交互分析儀表板
         </h2>
+        
+        <!-- 調試信息區域 -->
+        <div id="debug-info" class="debug-info" style="display: none;">
+          <h4>調試信息：</h4>
+          <div id="debug-content"></div>
+        </div>
+        <button id="toggle-debug" class="btn btn-info btn-sm" style="margin-bottom: 10px;">顯示/隱藏調試信息</button>
         
         <!-- 統計卡片 -->
         <div class="stats-container">
@@ -171,7 +190,8 @@
             <div class="controls">
               <button id="object-zoom-in" class="btn btn-control">🔍 放大</button>
               <button id="object-zoom-out" class="btn btn-control">🔍 縮小</button>
-              <button id="object-reset" class="btn btn-control">重置</button>
+              <button id="object-reset" class="btn btn-control">🔄 重置</button>
+              <button id="object-animate" class="btn btn-control">✨ 動畫</button>
             </div>
             <div class="chart-container" id="object-chart" style="height: 700px;"></div>
           </div>
@@ -181,7 +201,8 @@
             <div class="controls">
               <button id="location-zoom-in" class="btn btn-control">🔍 放大</button>
               <button id="location-zoom-out" class="btn btn-control">🔍 縮小</button>
-              <button id="location-reset" class="btn btn-control"> 重置</button>
+              <button id="location-reset" class="btn btn-control">🔄 重置</button>
+              <button id="location-animate" class="btn btn-control">✨ 動畫</button>
             </div>
             <div class="chart-container" id="location-chart" style="height: 700px;"></div>
           </div>
@@ -196,13 +217,23 @@
   
   <script>
     // 從後端傳入的數據
-    const interactionData = {{ interaction_data | tojson }};
-    const personaNames = {{ persona_names | tojson }};
+    let interactionData;
+    let personaNames;
+    
+    try {
+      interactionData = {{ interaction_data | tojson }};
+      personaNames = {{ persona_names | tojson }};
+    } catch (e) {
+      console.error('數據解析錯誤:', e);
+      interactionData = { object_interactions: [], location_interactions: [] };
+      personaNames = [];
+    }
     
     // 全局變量
     let objectSvg, locationSvg, objectZoom, locationZoom;
     let tooltip;
     let animationRunning = false;
+    let debugMode = false;
     
     // 顏色方案
     const colors = {
@@ -211,10 +242,28 @@
       location: ['#FF8A80', '#82B1FF', '#B39DDB', '#C5E1A5', '#FFD54F', '#FFAB91', '#80DEEA', '#F8BBD9']
     };
     
+    // 調試函數
+    function debugLog(message) {
+      console.log(message);
+      if (debugMode) {
+        const debugContent = document.getElementById('debug-content');
+        debugContent.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+        debugContent.scrollTop = debugContent.scrollHeight;
+      }
+    }
+    
     // 當頁面載入完成後初始化
     document.addEventListener('DOMContentLoaded', function() {
-      console.log('Interaction Data:', interactionData);
-      console.log('Persona Names:', personaNames);
+      debugLog('頁面載入完成，開始初始化...');
+      debugLog('Interaction Data: ' + JSON.stringify(interactionData, null, 2));
+      debugLog('Persona Names: ' + JSON.stringify(personaNames));
+      
+      // 綁定調試按鈕
+      document.getElementById('toggle-debug').addEventListener('click', function() {
+        debugMode = !debugMode;
+        const debugInfo = document.getElementById('debug-info');
+        debugInfo.style.display = debugMode ? 'block' : 'none';
+      });
       
       initializeTooltip();
       updateStatistics();
@@ -224,7 +273,7 @@
       // 綁定頁籤切換事件
       $('.nav-tabs a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
         const target = $(e.target).attr("href");
-        console.log('Tab switched to:', target);
+        debugLog('頁籤切換到: ' + target);
         
         // 延遲100ms確保DOM更新完成
         setTimeout(() => {
@@ -239,6 +288,7 @@
       tooltip = d3.select("body").append("div")
         .attr("class", "tooltip")
         .style("opacity", 0);
+      debugLog('Tooltip 初始化完成');
     }
     
     function updateStatistics() {
@@ -252,10 +302,13 @@
       document.getElementById('total-object-count').textContent = objectCount;
       document.getElementById('total-location-count').textContent = locationCount;
       document.getElementById('total-interaction-count').textContent = totalInteractions;
+      
+      debugLog(`統計更新：AI:${aiCount}, 物品:${objectCount}, 地區:${locationCount}, 總交互:${totalInteractions}`);
     }
     
     // 改進的圓環圖 - AI與物品
     function createCircularObjectChart() {
+      debugLog('開始創建AI與物品圓環圖...');
       d3.select("#object-chart").html("");
       
       const width = document.querySelector("#object-chart").clientWidth;
@@ -283,10 +336,13 @@
       const g = svg.append("g");
       
       // 準備數據
-      const data = interactionData.object_interactions;
+      const data = interactionData.object_interactions || [];
+      debugLog(`物品交互數據：${data.length} 筆`);
+      
       const objects = [...new Set(data.map(d => d.object))];
       
       if (objects.length === 0) {
+        debugLog('沒有物品交互數據，顯示提示信息');
         g.append("text")
           .attr("x", centerX)
           .attr("y", centerY)
@@ -297,10 +353,24 @@
         return;
       }
       
-      // 過濾低頻交互，減少視覺混亂
-      const minInteractions = 3;
+      // 調整過濾條件，降低最小交互次數
+      const minInteractions = 1; // 降低門檻
       const filteredData = data.filter(d => d.count >= minInteractions);
       const filteredObjects = [...new Set(filteredData.map(d => d.object))];
+      
+      debugLog(`過濾後物品數據：${filteredData.length} 筆，${filteredObjects.length} 個物品`);
+      
+      if (filteredData.length === 0) {
+        debugLog('過濾後沒有數據，顯示提示信息');
+        g.append("text")
+          .attr("x", centerX)
+          .attr("y", centerY)
+          .attr("text-anchor", "middle")
+          .attr("font-size", "18px")
+          .attr("fill", "#666")
+          .text("沒有符合條件的物品交互數據");
+        return;
+      }
       
       const aiAngleStep = (2 * Math.PI) / personaNames.length;
       const objectAngleStep = (2 * Math.PI) / filteredObjects.length;
@@ -341,6 +411,8 @@
         };
       }).filter(d => d !== null);
       
+      debugLog(`創建了 ${connections.length} 個連接`);
+      
       // 繪製連接線
       const lines = g.selectAll(".connection-line")
         .data(connections)
@@ -352,20 +424,20 @@
         .attr("x2", d => d.target.x)
         .attr("y2", d => d.target.y)
         .attr("stroke", d => d.source.color)
-        .attr("stroke-width", d => Math.min(Math.sqrt(d.count) + 1, 5))
+        .attr("stroke-width", d => Math.max(Math.sqrt(d.count), 1))
         .attr("stroke-opacity", 0.4)
         .on("mouseover", function(event, d) {
           d3.select(this).attr("stroke-opacity", 0.9).attr("stroke-width", Math.sqrt(d.count) * 2 + 2);
           showTooltip(event, `${d.agent} ↔ ${d.object}<br/>交互次數: ${d.count}`);
         })
         .on("mouseout", function(event, d) {
-          d3.select(this).attr("stroke-opacity", 0.4).attr("stroke-width", Math.min(Math.sqrt(d.count) + 1, 5));
+          d3.select(this).attr("stroke-opacity", 0.4).attr("stroke-width", Math.max(Math.sqrt(d.count), 1));
           hideTooltip();
         });
       
       // 只在高頻交互上顯示數字
       const lineLabels = g.selectAll(".line-label")
-        .data(connections.filter(d => d.count > 5))
+        .data(connections.filter(d => d.count > 2))
         .enter()
         .append("text")
         .attr("class", "line-label")
@@ -452,25 +524,14 @@
         .attr("font-weight", "bold")
         .style("text-shadow", "1px 1px 2px rgba(0,0,0,0.7)")
         .text(d => {
-          if (d.name.length <= 10) {
+          if (d.name.length <= 6) {
             return d.name;
-          } else if (d.name.length <= 12) {
-            return d.name.substring(0, 10) + '..';
           } else {
-            return d.name.substring(0, 9) + '...';
+            return d.name.substring(0, 5) + '...';
           }
         });
       
       // 添加標籤
-      g.append("text")
-        .attr("x", centerX)
-        .attr("y", centerY - innerRadius + 20)
-        .attr("text-anchor", "middle")
-        .attr("font-size", "14px")
-        .attr("font-weight", "bold")
-        .attr("fill", "#2C3E50")
-        .text("");
-      
       g.append("text")
         .attr("x", centerX)
         .attr("y", centerY + outerRadius + 110)
@@ -510,10 +571,13 @@
         lines.style("stroke-opacity", 0.4);
         lineLabels.style("opacity", 0.7);
       }
+      
+      debugLog('AI與物品圓環圖創建完成');
     }
     
     // AI與地區圓環圖
     function createCircularLocationChart() {
+      debugLog('開始創建AI與地區圓環圖...');
       d3.select("#location-chart").html("");
       
       const width = document.querySelector("#location-chart").clientWidth;
@@ -541,10 +605,13 @@
       const g = svg.append("g");
       
       // 準備數據
-      const data = interactionData.location_interactions;
+      const data = interactionData.location_interactions || [];
+      debugLog(`地區交互數據：${data.length} 筆`);
+      
       const locations = [...new Set(data.map(d => d.location))];
       
       if (locations.length === 0) {
+        debugLog('沒有地區交互數據，顯示提示信息');
         g.append("text")
           .attr("x", centerX)
           .attr("y", centerY)
@@ -555,10 +622,24 @@
         return;
       }
       
-      // 過濾低頻交互
-      const minInteractions = 2;
+      // 調整過濾條件，降低最小交互次數
+      const minInteractions = 1; // 降低門檻
       const filteredData = data.filter(d => d.count >= minInteractions);
       const filteredLocations = [...new Set(filteredData.map(d => d.location))];
+      
+      debugLog(`過濾後地區數據：${filteredData.length} 筆，${filteredLocations.length} 個地區`);
+      
+      if (filteredData.length === 0) {
+        debugLog('過濾後沒有數據，顯示提示信息');
+        g.append("text")
+          .attr("x", centerX)
+          .attr("y", centerY)
+          .attr("text-anchor", "middle")
+          .attr("font-size", "18px")
+          .attr("fill", "#666")
+          .text("沒有符合條件的地區交互數據");
+        return;
+      }
       
       const aiAngleStep = (2 * Math.PI) / personaNames.length;
       const locationAngleStep = (2 * Math.PI) / filteredLocations.length;
@@ -599,6 +680,8 @@
         };
       }).filter(d => d !== null);
       
+      debugLog(`創建了 ${connections.length} 個地區連接`);
+      
       // 繪製背景圓環
       g.append("circle")
         .attr("cx", centerX)
@@ -629,20 +712,20 @@
         .attr("x2", d => d.target.x)
         .attr("y2", d => d.target.y)
         .attr("stroke", d => d.source.color)
-        .attr("stroke-width", d => Math.min(Math.sqrt(d.count) + 1, 5))
+        .attr("stroke-width", d => Math.max(Math.sqrt(d.count), 1))
         .attr("stroke-opacity", 0.4)
         .on("mouseover", function(event, d) {
           d3.select(this).attr("stroke-opacity", 0.9).attr("stroke-width", Math.sqrt(d.count) * 2 + 2);
           showTooltip(event, `${d.agent} ↔ ${d.location}<br/>活動次數: ${d.count}`);
         })
         .on("mouseout", function(event, d) {
-          d3.select(this).attr("stroke-opacity", 0.4).attr("stroke-width", Math.min(Math.sqrt(d.count) + 1, 5));
+          d3.select(this).attr("stroke-opacity", 0.4).attr("stroke-width", Math.max(Math.sqrt(d.count), 1));
           hideTooltip();
         });
       
       // 繪製連接線上的數字
       const lineLabels = g.selectAll(".line-label")
-        .data(connections.filter(d => d.count > 3))
+        .data(connections.filter(d => d.count > 2))
         .enter()
         .append("text")
         .attr("class", "line-label")
@@ -754,33 +837,22 @@
         .attr("font-weight", "bold")
         .style("text-shadow", "1px 1px 2px rgba(0,0,0,0.7)")
         .text(d => {
-          if (d.name.length <= 8) {
+          if (d.name.length <= 6) {
             return d.name;
-          } else if (d.name.length <= 10) {
-            return d.name.substring(0, 8) + '..';
           } else {
-            return d.name.substring(0, 7) + '...';
+            return d.name.substring(0, 5) + '...';
           }
         });
       
       // 添加標籤
       g.append("text")
         .attr("x", centerX)
-        .attr("y", centerY - innerRadius + 20)
+        .attr("y", centerY + outerRadius + 110)
         .attr("text-anchor", "middle")
-        .attr("font-size", "14px")
+        .attr("font-size", "16px")
         .attr("font-weight", "bold")
         .attr("fill", "#2C3E50")
-        .text(" ");
-      
-      g.append("text")
-        .attr("x", centerX)
-        .attr("y", centerY + outerRadius + 30)
-        .attr("text-anchor", "middle")
-        .attr("font-size", "14px")
-        .attr("font-weight", "bold")
-        .attr("fill", "#2C3E50")
-        .text("");
+        .text("🏠 活動地區");
       
       // 添加過濾提示
       if (data.length > filteredData.length) {
@@ -812,6 +884,8 @@
         lines.style("stroke-opacity", 0.4);
         lineLabels.style("opacity", 0.7);
       }
+      
+      debugLog('AI與地區圓環圖創建完成');
     }
     
     // 輔助函數
@@ -885,7 +959,11 @@
     
     // 動畫效果
     function animateConnections(chartSelector) {
+      if (animationRunning) return;
+      
       animationRunning = true;
+      debugLog('開始播放動畫效果');
+      
       const lines = d3.select(chartSelector).selectAll('.connection-line');
       const labels = d3.select(chartSelector).selectAll('.line-label');
       
@@ -923,6 +1001,7 @@
       
       setTimeout(() => {
         animationRunning = false;
+        debugLog('動畫效果結束');
       }, 2000);
     }
   </script>

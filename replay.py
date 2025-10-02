@@ -5,7 +5,10 @@ from datetime import datetime, timedelta
 from flask import Flask, render_template, request
 
 from compress import frames_per_step, file_movement
-from start import personas
+from start import load_personas_from_config
+
+# 載入AI居民列表
+personas = load_personas_from_config()
 
 app = Flask(
     __name__,
@@ -87,11 +90,19 @@ def extract_interaction_data(checkpoints_folder):
     object_interactions = collections.defaultdict(int)
     location_interactions = collections.defaultdict(int)
     
+    print(f"正在提取交互數據，資料夾：{checkpoints_folder}")
+    
     try:
         checkpoint_files = [f for f in os.listdir(checkpoints_folder) 
                            if f.startswith("simulate-") and f.endswith(".json")]
         checkpoint_files.sort()
+        print(f"找到 {len(checkpoint_files)} 個檢查點檔案")
     except FileNotFoundError:
+        print(f"錯誤：找不到資料夾 {checkpoints_folder}")
+        return object_interactions, location_interactions
+    
+    if not checkpoint_files:
+        print("警告：沒有找到任何檢查點檔案")
         return object_interactions, location_interactions
     
     for checkpoint_file in checkpoint_files:
@@ -100,52 +111,69 @@ def extract_interaction_data(checkpoints_folder):
             with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             
-            if "agents" in data:
-                for agent_name, agent_data in data["agents"].items():
-                    if agent_name not in personas:
-                        continue
+            if "agents" not in data:
+                print(f"警告：檔案 {checkpoint_file} 中沒有 agents 數據")
+                continue
+                
+            for agent_name, agent_data in data["agents"].items():
+                if agent_name not in personas:
+                    continue
+                
+                # 檢查 action 和 event 結構
+                if "action" not in agent_data:
+                    continue
                     
-                    if "action" in agent_data and "event" in agent_data["action"]:
-                        event = agent_data["action"]["event"]
-                        
-                        if "address" in event and event["address"]:
-                            address = event["address"]
-                            
-                            if isinstance(address, list) and len(address) >= 2:
-                                if len(address) >= 3:
-                                    location = address[-2]
-                                    obj = address[-1]
-                                else:
-                                    location = address[-1]
-                                    obj = address[-1]
-                                
-                                # 統計地區交互
-                                if location and location.strip():
-                                    location_key = (agent_name, location)
-                                    location_interactions[location_key] += 1
-                                
-                                # 統計物品交互
-                                general_locations = [
-                                    "客廳", "廚房", "臥室", "浴室", "辦公室", "餐廳", 
-                                    "大廳", "走廊", "陽台", "房間", "家", "屋子",
-                                    "living room", "kitchen", "bedroom", "bathroom",
-                                    "咖啡廳", "圖書館", "公園", "學校", "醫院",
-                                    "商店", "市場", "銀行", "郵局", "車站"
-                                ]
-                                
-                                if obj and obj.strip() and obj not in general_locations and len(obj) > 0:
-                                    object_key = (agent_name, obj)
-                                    object_interactions[object_key] += 1
-                            
-                            elif len(address) == 1:
-                                location = address[0]
-                                if location and location.strip():
-                                    location_key = (agent_name, location)
-                                    location_interactions[location_key] += 1
+                action = agent_data["action"]
+                if "event" not in action or not action["event"]:
+                    continue
+                    
+                event = action["event"]
+                if "address" not in event or not event["address"]:
+                    continue
+                
+                address = event["address"]
+                
+                # 確保 address 是列表
+                if not isinstance(address, list):
+                    continue
+                
+                # 處理地區交互
+                if len(address) >= 1:
+                    # 取最後一個地址作為地區
+                    location = address[-1]
+                    if location and location.strip():
+                        location_key = (agent_name, location)
+                        location_interactions[location_key] += 1
+                        print(f"地區交互：{agent_name} -> {location}")
+                
+                # 處理物品交互
+                if len(address) >= 2:
+                    # 如果有多層地址，最後一層可能是物品
+                    potential_object = address[-1]
+                    
+                    # 排除通用地區名稱
+                    general_locations = [
+                        "客廳", "廚房", "臥室", "浴室", "辦公室", "餐廳", 
+                        "大廳", "走廊", "陽台", "房間", "家", "屋子",
+                        "living room", "kitchen", "bedroom", "bathroom",
+                        "咖啡廳", "圖書館", "公園", "學校", "醫院",
+                        "商店", "市場", "銀行", "郵局", "車站", "教室",
+                        "會議室", "休息室", "洗手間", "樓梯", "電梯"
+                    ]
+                    
+                    if (potential_object and 
+                        potential_object.strip() and 
+                        potential_object not in general_locations and 
+                        len(potential_object) > 0):
+                        object_key = (agent_name, potential_object)
+                        object_interactions[object_key] += 1
+                        print(f"物品交互：{agent_name} -> {potential_object}")
         
         except (json.JSONDecodeError, KeyError, TypeError) as e:
+            print(f"錯誤：讀取檔案 {checkpoint_file} 時發生錯誤：{e}")
             continue
     
+    print(f"提取完成：物品交互 {len(object_interactions)} 筆，地區交互 {len(location_interactions)} 筆")
     return object_interactions, location_interactions
 
 
@@ -393,113 +421,11 @@ def object_interaction():
     else:
         return f"Invalid name of the simulation: '{name}'"
 
-    # 分析AI與物品/地區的交互數據
-    object_interactions = collections.defaultdict(int)
-    location_interactions = collections.defaultdict(int)
-    action_details = collections.defaultdict(list)  # 記錄詳細的動作信息
+    print(f"正在分析交互數據，模擬名稱：{name}")
+    print(f"檢查點資料夾：{checkpoint_folder}")
 
-    # 讀取所有checkpoint文件
-    try:
-        checkpoint_files = [f for f in os.listdir(checkpoint_folder) 
-                           if f.startswith("simulate-") and f.endswith(".json")]
-        checkpoint_files.sort()  # 按時間順序排序
-    except FileNotFoundError:
-        return f"Checkpoint folder not found: '{checkpoint_folder}'"
-    
-    if not checkpoint_files:
-        return f"No simulation data found in: '{checkpoint_folder}'"
-
-    print(f"Found {len(checkpoint_files)} checkpoint files")
-
-    # 分析每個checkpoint文件
-    for checkpoint_file in checkpoint_files:
-        file_path = os.path.join(checkpoint_folder, checkpoint_file)
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            
-            # 分析agents數據
-            if "agents" in data:
-                for agent_name, agent_data in data["agents"].items():
-                    if agent_name not in personas:
-                        continue  # 只分析已知的persona
-                    
-                    # 檢查action結構
-                    if "action" in agent_data:
-                        action = agent_data["action"]
-                        
-                        # 檢查event結構
-                        if "event" in action and action["event"]:
-                            event = action["event"]
-                            
-                            # 獲取地址信息
-                            if "address" in event and event["address"]:
-                                address = event["address"]
-                                
-                                # 確保address是列表且有足夠的元素
-                                if isinstance(address, list) and len(address) >= 2:
-                                    # 提取地區信息（倒數第二個元素，如果存在）
-                                    if len(address) >= 3:
-                                        location = address[-2]  # 地區
-                                        obj = address[-1]       # 具體物品/房間
-                                    else:
-                                        location = address[-1]
-                                        obj = address[-1]
-                                    
-                                    # 記錄動作詳情
-                                    action_detail = {
-                                        'agent': agent_name,
-                                        'location': location,
-                                        'object': obj,
-                                        'describe': event.get('describe', ''),
-                                        'predicate': event.get('predicate', ''),
-                                        'object_name': event.get('object', ''),
-                                        'time': data.get('time', ''),
-                                        'address': address
-                                    }
-                                    action_details[agent_name].append(action_detail)
-                                    
-                                    # 統計地區交互
-                                    if location and location.strip():
-                                        location_key = (agent_name, location)
-                                        location_interactions[location_key] += 1
-                                    
-                                    # 統計物品交互（排除一些通用的地區名稱）
-                                    general_locations = [
-                                        "客廳", "廚房", "臥室", "浴室", "辦公室", "餐廳", 
-                                        "大廳", "走廊", "陽台", "房間", "家", "屋子",
-                                        "living room", "kitchen", "bedroom", "bathroom",
-                                        "咖啡廳", "圖書館", "公園", "學校", "醫院",
-                                        "商店", "市場", "銀行", "郵局", "車站"
-                                    ]
-                                    
-                                    # 如果最後一個元素不是通用地區名稱，則視為物品
-                                    if obj and obj.strip() and obj not in general_locations and len(obj) > 0:
-                                        object_key = (agent_name, obj)
-                                        object_interactions[object_key] += 1
-                                
-                                # 如果只有一個地址元素，也統計為地區
-                                elif len(address) == 1:
-                                    location = address[0]
-                                    if location and location.strip():
-                                        location_key = (agent_name, location)
-                                        location_interactions[location_key] += 1
-        
-        except (json.JSONDecodeError, KeyError, TypeError) as e:
-            print(f"Error reading file {checkpoint_file}: {e}")
-            continue
-
-    print(f"Total object interactions: {len(object_interactions)}")
-    print(f"Total location interactions: {len(location_interactions)}")
-    
-    # 打印一些示例數據用於調試
-    print("Sample object interactions:")
-    for (agent, obj), count in list(object_interactions.items())[:5]:
-        print(f"  {agent} -> {obj}: {count}")
-    
-    print("Sample location interactions:")
-    for (agent, loc), count in list(location_interactions.items())[:5]:
-        print(f"  {agent} -> {loc}: {count}")
+    # 獲取物品和地區交互數據
+    object_interactions, location_interactions = extract_interaction_data(checkpoint_folder)
 
     # 轉換為前端需要的格式
     object_interaction_list = []
@@ -520,26 +446,29 @@ def object_interaction():
 
     # 如果沒有真實數據，創建一些示例數據避免頁面錯誤
     if not object_interaction_list and not location_interaction_list:
-        print("No interaction data found, creating sample data...")
+        print("沒有找到交互數據，創建示例數據...")
         # 創建示例數據
-        sample_objects = ["電腦", "咖啡機", "書桌", "椅子", "手機"]
-        sample_locations = ["辦公室", "咖啡廳", "圖書館", "會議室", "休息室"]
+        sample_objects = ["電腦", "咖啡機", "書桌", "椅子", "手機", "筆記本", "投影機", "白板"]
+        sample_locations = ["辦公室", "咖啡廳", "圖書館", "會議室", "休息室", "教室", "實驗室", "宿舍"]
         
-        for i, agent in enumerate(personas[:5]):  # 只為前5個角色創建示例
+        import random
+        for i, agent in enumerate(personas):
             # 物品交互
-            for j, obj in enumerate(sample_objects[:3]):
+            for j in range(3):  # 每個 AI 與 3 個物品有交互
+                obj = sample_objects[(i + j) % len(sample_objects)]
                 object_interaction_list.append({
                     "agent": agent,
                     "object": obj,
-                    "count": (i + j + 1) * 3
+                    "count": random.randint(5, 25)
                 })
             
             # 地區交互
-            for j, loc in enumerate(sample_locations[:3]):
+            for j in range(2):  # 每個 AI 與 2 個地區有交互
+                loc = sample_locations[(i + j) % len(sample_locations)]
                 location_interaction_list.append({
                     "agent": agent,
                     "location": loc,
-                    "count": (i + j + 1) * 5
+                    "count": random.randint(8, 30)
                 })
 
     # 按交互次數排序，優先顯示高頻交互
@@ -551,13 +480,190 @@ def object_interaction():
         "location_interactions": location_interaction_list
     }
 
-    print(f"Final data - Objects: {len(object_interaction_list)}, Locations: {len(location_interaction_list)}")
+    print(f"最終數據：物品交互 {len(object_interaction_list)} 筆，地區交互 {len(location_interaction_list)} 筆")
+    
+    # 打印前幾筆數據用於調試
+    if object_interaction_list:
+        print("物品交互示例：")
+        for item in object_interaction_list[:3]:
+            print(f"  {item['agent']} -> {item['object']}: {item['count']}")
+    
+    if location_interaction_list:
+        print("地區交互示例：")
+        for item in location_interaction_list[:3]:
+            print(f"  {item['agent']} -> {item['location']}: {item['count']}")
 
     return render_template(
         "object_interaction.html",
         interaction_data=interaction_data,
         persona_names=personas
     )
+
+
+# 問卷系統路由
+@app.route("/surveys", methods=['GET'])
+def surveys_list():
+    """問卷列表頁面"""
+    from survey_system import SurveyManager
+    manager = SurveyManager()
+    surveys = manager.get_all_surveys()
+    
+    return render_template(
+        "surveys/list.html",
+        surveys=surveys
+    )
+
+
+@app.route("/surveys/create", methods=['GET', 'POST'])
+def survey_create():
+    """創建問卷頁面"""
+    if request.method == 'POST':
+        from survey_system import SurveyManager, SurveyImportManager
+        
+        manager = SurveyManager()
+        import_manager = SurveyImportManager()
+        
+        # 處理問卷創建
+        import_type = request.form.get('import_type', 'manual')
+        
+        if import_type == 'manual':
+            # 手動創建問卷
+            title = request.form.get('title', '未命名問卷')
+            description = request.form.get('description', '')
+            
+            from survey_system.models import Survey
+            survey = Survey(title=title, description=description)
+            
+            # 從表單提取問題
+            question_texts = {}
+            question_types = {}
+            question_required = {}
+            question_options = {}
+            
+            # 解析表單數據
+            for key, value in request.form.items():
+                if key.startswith('question_text_'):
+                    question_id = key.split('_')[-1]
+                    question_texts[question_id] = value
+                elif key.startswith('question_type_'):
+                    question_id = key.split('_')[-1]
+                    question_types[question_id] = value
+                elif key.startswith('question_required_'):
+                    question_id = key.split('_')[-1]
+                    question_required[question_id] = True
+                elif key.startswith('option_'):
+                    # 格式: option_questionId_optionId
+                    parts = key.split('_')
+                    if len(parts) >= 3:
+                        question_id = parts[1]
+                        if question_id not in question_options:
+                            question_options[question_id] = []
+                        if value.strip():  # 只添加非空選項
+                            question_options[question_id].append(value.strip())
+            
+            # 創建問題
+            for question_id in sorted(question_texts.keys(), key=int):
+                if question_texts[question_id].strip():  # 只添加有內容的問題
+                    question_type = question_types.get(question_id, 'text')
+                    options = question_options.get(question_id, []) if question_type in ['single_choice', 'multiple_choice'] else None
+                    required = question_id in question_required
+                    
+                    survey.add_question(
+                        question_type=question_type,
+                        question_text=question_texts[question_id].strip(),
+                        options=options,
+                        required=required
+                    )
+            
+            if len(survey.questions) > 0:
+                manager.save_survey(survey)
+            else:
+                from flask import redirect, url_for, flash
+                flash('問卷必須包含至少一個問題', 'error')
+                return redirect(url_for('survey_create'))
+            
+        elif import_type == 'url':
+            # 從URL匯入
+            url = request.form.get('import_url', '')
+            survey = import_manager.import_survey(url, 'url')
+            if survey:
+                manager.save_survey(survey)
+            
+        elif import_type == 'json':
+            # 從JSON匯入
+            json_data = request.form.get('json_data', '')
+            survey = import_manager.import_survey(json_data, 'json')
+            if survey:
+                manager.save_survey(survey)
+        
+        from flask import redirect
+        return redirect('/surveys')
+    
+    return render_template("surveys/create.html")
+
+
+@app.route("/surveys/<survey_id>", methods=['GET'])
+def survey_detail(survey_id):
+    """問卷詳情頁面"""
+    from survey_system import SurveyManager
+    manager = SurveyManager()
+    
+    survey = manager.load_survey(survey_id)
+    if not survey:
+        return "問卷不存在", 404
+    
+    responses = manager.get_responses_by_survey(survey_id)
+    stats = manager.get_survey_stats(survey_id)
+    
+    return render_template(
+        "surveys/detail.html",
+        survey=survey,
+        responses=responses,
+        stats=stats
+    )
+
+
+@app.route("/surveys/<survey_id>/fill", methods=['POST'])
+def survey_fill(survey_id):
+    """讓AI居民填寫問卷"""
+    from survey_system import SurveyManager, AIResidentSurveyFiller
+    
+    manager = SurveyManager()
+    filler = AIResidentSurveyFiller(manager)
+    
+    try:
+        responses = filler.fill_survey_for_all_residents(survey_id)
+        return {
+            "success": True,
+            "message": f"成功生成 {len(responses)} 個AI居民的問卷回應",
+            "response_count": len(responses)
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}, 400
+
+
+@app.route("/surveys/<survey_id>/export", methods=['GET'])
+def survey_export(survey_id):
+    """匯出問卷結果"""
+    from survey_system import SurveyManager, SurveyExportManager
+    
+    format_type = request.args.get('format', 'csv')
+    
+    manager = SurveyManager()
+    exporter = SurveyExportManager(manager)
+    
+    try:
+        output_path = exporter.export_survey(survey_id, format_type)
+        
+        # 返回文件下載
+        from flask import send_file
+        return send_file(
+            output_path,
+            as_attachment=True,
+            download_name=os.path.basename(output_path)
+        )
+    except Exception as e:
+        return f"匯出失敗: {str(e)}", 400
 
 
 if __name__ == "__main__":

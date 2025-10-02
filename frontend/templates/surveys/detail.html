@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2>{{ survey.title }}</h2>
+                    <p class="text-muted">{{ survey.description }}</p>
+                </div>
+                <div>
+                    <a href="/surveys" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> 返回列表
+                    </a>
+                </div>
+            </div>
+
+            <!-- 統計信息卡片 -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0">{{ stats.total_responses }}</h4>
+                                    <p class="mb-0">總回應數</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-users fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0">{{ stats.completed_responses }}</h4>
+                                    <p class="mb-0">已完成</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-check-circle fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0">{{ "%.1f"|format(stats.completion_rate) }}%</h4>
+                                    <p class="mb-0">完成率</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-percentage fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0">{{ stats.question_count }}</h4>
+                                    <p class="mb-0">問題數量</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-question-circle fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- 問卷結構 -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">問卷結構</h5>
+                            {% if stats.total_responses == 0 %}
+                            <button class="btn btn-success btn-sm" onclick="fillSurvey('{{ survey.survey_id }}')">
+                                <i class="fas fa-robot"></i> 讓AI居民填寫
+                            </button>
+                            {% endif %}
+                        </div>
+                        <div class="card-body">
+                            {% for question in survey.questions %}
+                            <div class="mb-3 pb-3 border-bottom">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <h6 class="text-primary">Q{{ question.id }}</h6>
+                                    <span class="badge badge-{{ 'danger' if question.required else 'secondary' }} badge-sm">
+                                        {{ '必填' if question.required else '選填' }}
+                                    </span>
+                                </div>
+                                <p class="mb-2">{{ question.text }}</p>
+                                
+                                {% set type_labels = {
+                                    'single_choice': '單選題',
+                                    'multiple_choice': '多選題', 
+                                    'rating': '評分題',
+                                    'text': '文字題'
+                                } %}
+                                
+                                <small class="text-muted">
+                                    <i class="fas fa-tag"></i> {{ type_labels.get(question.type, question.type) }}
+                                </small>
+                                
+                                {% if question.options %}
+                                <div class="mt-2">
+                                    {% for option in question.options %}
+                                    <div class="form-check form-check-inline">
+                                        <span class="badge badge-light">{{ option }}</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 回應統計 -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">回應統計</h5>
+                            {% if stats.total_responses > 0 %}
+                            <div class="dropdown">
+                                <button class="btn btn-primary btn-sm dropdown-toggle" type="button" 
+                                        data-toggle="dropdown">
+                                    <i class="fas fa-download"></i> 匯出數據
+                                </button>
+                                <div class="dropdown-menu">
+                                    <a class="dropdown-item" href="/surveys/{{ survey.survey_id }}/export?format=csv">
+                                        <i class="fas fa-file-csv"></i> CSV格式
+                                    </a>
+                                    <a class="dropdown-item" href="/surveys/{{ survey.survey_id }}/export?format=json">
+                                        <i class="fas fa-file-code"></i> JSON格式
+                                    </a>
+                                    <a class="dropdown-item" href="/surveys/{{ survey.survey_id }}/export?format=excel">
+                                        <i class="fas fa-file-excel"></i> Excel格式
+                                    </a>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="card-body">
+                            {% if responses %}
+                            <!-- 回應者列表 -->
+                            <div class="mb-3">
+                                <h6>回應者</h6>
+                                <div class="row">
+                                    {% for response in responses %}
+                                    <div class="col-md-6 mb-2">
+                                        <div class="d-flex align-items-center">
+                                            <div class="mr-2">
+                                                {% if response.is_completed() %}
+                                                <i class="fas fa-check-circle text-success"></i>
+                                                {% else %}
+                                                <i class="fas fa-clock text-warning"></i>
+                                                {% endif %}
+                                            </div>
+                                            <div>
+                                                <strong>{{ response.respondent_name }}</strong>
+                                                <br>
+                                                <small class="text-muted">
+                                                    {{ response.started_at[:19].replace('T', ' ') }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <!-- 簡單統計 -->
+                            {% for question in survey.questions %}
+                            <div class="mb-4">
+                                <h6 class="text-primary">Q{{ question.id }}: {{ question.text[:30] }}{% if question.text|length > 30 %}...{% endif %}</h6>
+                                
+                                {% if question.type in ['single_choice', 'multiple_choice'] and question.options %}
+                                <!-- 選擇題統計 -->
+                                {% set option_counts = {} %}
+                                {% for response in responses %}
+                                    {% set answer = response.responses.get(question.id|string, []) %}
+                                    {% if answer %}
+                                        {% if answer is string %}
+                                            {% set _ = option_counts.update({answer: option_counts.get(answer, 0) + 1}) %}
+                                        {% elif answer is iterable %}
+                                            {% for opt in answer %}
+                                                {% set _ = option_counts.update({opt: option_counts.get(opt, 0) + 1}) %}
+                                            {% endfor %}
+                                        {% endif %}
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% for option in question.options %}
+                                {% set count = option_counts.get(option, 0) %}
+                                {% set percentage = (count / responses|length * 100) if responses else 0 %}
+                                <div class="mb-2">
+                                    <div class="d-flex justify-content-between">
+                                        <span>{{ option }}</span>
+                                        <span>{{ count }} ({{ "%.1f"|format(percentage) }}%)</span>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar" style="width: {{ percentage }}%"></div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                                
+                                {% elif question.type == 'rating' %}
+                                <!-- 評分題統計 -->
+                                {% set ratings = [] %}
+                                {% for response in responses %}
+                                    {% set rating = response.responses.get(question.id|string) %}
+                                    {% if rating and rating != '未回答' %}
+                                        {% set _ = ratings.append(rating|int) %}
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if ratings %}
+                                {% set avg_rating = (ratings|sum / ratings|length) %}
+                                <div class="text-center">
+                                    <h3 class="text-warning">{{ "%.1f"|format(avg_rating) }}</h3>
+                                    <div class="mb-2">
+                                        {% for i in range(1, 6) %}
+                                            {% if i <= avg_rating %}
+                                                <i class="fas fa-star text-warning"></i>
+                                            {% else %}
+                                                <i class="far fa-star text-muted"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    <small class="text-muted">平均分數 (基於{{ ratings|length }}個回應)</small>
+                                </div>
+                                {% endif %}
+                                
+                                {% elif question.type == 'text' %}
+                                <!-- 文字題統計 -->
+                                {% set text_responses = [] %}
+                                {% for response in responses %}
+                                    {% set text = response.responses.get(question.id|string) %}
+                                    {% if text and text != '未回答' %}
+                                        {% set _ = text_responses.append(text) %}
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                <div class="small">
+                                    <strong>{{ text_responses|length }}</strong> 個文字回應
+                                    {% if text_responses %}
+                                    <div class="mt-2">
+                                        {% for text in text_responses[:3] %}
+                                        <div class="border-left pl-2 mb-2">
+                                            "{{ text[:100] }}{% if text|length > 100 %}...{% endif %}"
+                                        </div>
+                                        {% endfor %}
+                                        {% if text_responses|length > 3 %}
+                                        <small class="text-muted">還有 {{ text_responses|length - 3 }} 個回應...</small>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                            
+                            {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">尚無回應數據</h5>
+                                <p class="text-muted">點擊上方按鈕讓AI居民填寫問卷</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI填寫進度模態框 -->
+<div class="modal fade" id="fillProgressModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">AI居民填寫問卷</h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="sr-only">處理中...</span>
+                </div>
+                <p id="fillStatus">正在讓AI居民填寫問卷，請稍候...</p>
+                <div class="progress">
+                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block js_content %}
+<script>
+function fillSurvey(surveyId) {
+    // 顯示進度模態框
+    $('#fillProgressModal').modal('show');
+    
+    // 模擬進度更新
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+        progress += 10;
+        $('.progress-bar').css('width', progress + '%');
+        
+        if (progress >= 90) {
+            clearInterval(progressInterval);
+        }
+    }, 300);
+    
+    // 發送AI填寫請求
+    fetch(`/surveys/${surveyId}/fill`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        clearInterval(progressInterval);
+        $('.progress-bar').css('width', '100%');
+        
+        if (data.success) {
+            $('#fillStatus').html(`
+                <i class="fas fa-check-circle text-success"></i><br>
+                成功！${data.response_count} 個AI居民已完成問卷填寫
+            `);
+            $('.spinner-border').hide();
+            
+            // 3秒後關閉模態框並刷新頁面
+            setTimeout(() => {
+                $('#fillProgressModal').modal('hide');
+                location.reload();
+            }, 3000);
+        } else {
+            $('#fillStatus').html(`
+                <i class="fas fa-exclamation-triangle text-warning"></i><br>
+                填寫過程中出現問題：${data.error}
+            `);
+            $('.spinner-border').hide();
+        }
+    })
+    .catch(error => {
+        clearInterval(progressInterval);
+        $('#fillStatus').html(`
+            <i class="fas fa-times-circle text-danger"></i><br>
+            請求失敗：${error.message}
+        `);
+        $('.spinner-border').hide();
+    });
+}
+
+// 頁面載入完成後初始化
+$(document).ready(function() {
+    // 初始化下拉選單
+    $('.dropdown-toggle').dropdown();
+});
+</script>
+{% endblock js_content %}

@@ -9,11 +9,37 @@ from dotenv import load_dotenv, find_dotenv
 from modules.game import create_game, get_game
 from modules import utils
 
-personas = [
-    "盧品蓉", "鄭傑丞", "莊于萱", "施宇鴻",  # 學生
-    "游庭瑄", "李昇峰","魏祺紘",  # 家庭：教授、藥店主人、學生
-    "陳冠佑", "蔡宗陞",  # 酒吧老板、咖啡馆老板
-]
+# 從配置文件載入AI居民列表，避免硬編碼
+def load_personas_from_config():
+    """從配置文件載入AI居民列表"""
+    try:
+        with open("data/config.json", "r", encoding="utf-8") as f:
+            config_data = json.load(f)
+        
+        # 如果配置中有personas定義，使用配置的
+        if "personas" in config_data:
+            return config_data["personas"]
+        
+        # 否則從agents目錄動態掃描
+        agents_path = "frontend/static/assets/village/agents"
+        if os.path.exists(agents_path):
+            personas = []
+            for item in os.listdir(agents_path):
+                if os.path.isdir(os.path.join(agents_path, item)):
+                    # 將下劃線替換回空格
+                    persona_name = item.replace("_", " ")
+                    personas.append(persona_name)
+            return personas
+        
+        # 兜底方案：返回預設居民列表
+        return [
+            "盧品蓉", "鄭傑丞", "莊于萱", "施宇鴻",
+            "游庭瑄", "李昇峰", "魏祺紘",
+            "陳冠佑", "蔡宗陞"
+        ]
+    except Exception as e:
+        print(f"載入AI居民列表失敗: {e}")
+        return []
 
 
 class SimulateServer:
@@ -191,6 +217,7 @@ if __name__ == "__main__":
             exit(0)
         start_step = sim_config["step"]
     else:
+        personas = load_personas_from_config()
         sim_config = get_config(start_time, args.stride, personas)
         start_step = 0
 
