@@ -646,15 +646,15 @@ def survey_fill(survey_id):
 def survey_export(survey_id):
     """匯出問卷結果"""
     from survey_system import SurveyManager, SurveyExportManager
-    
+
     format_type = request.args.get('format', 'csv')
-    
+
     manager = SurveyManager()
     exporter = SurveyExportManager(manager)
-    
+
     try:
         output_path = exporter.export_survey(survey_id, format_type)
-        
+
         # 返回文件下載
         from flask import send_file
         return send_file(
@@ -664,6 +664,30 @@ def survey_export(survey_id):
         )
     except Exception as e:
         return f"匯出失敗: {str(e)}", 400
+
+
+@app.route("/surveys/<survey_id>/analytics", methods=['GET'])
+def survey_analytics(survey_id):
+    """問卷數據視覺化分析頁面"""
+    from survey_system import SurveyManager
+
+    manager = SurveyManager()
+    survey = manager.load_survey(survey_id)
+
+    if not survey:
+        return "問卷不存在", 404
+
+    # 獲取詳細分析數據
+    analytics = manager.get_response_analytics(survey_id)
+
+    if not analytics:
+        return "無法獲取分析數據", 400
+
+    return render_template(
+        "surveys/analytics.html",
+        survey=survey,
+        analytics=analytics
+    )
 
 
 if __name__ == "__main__":

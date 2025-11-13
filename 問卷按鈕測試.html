@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>問卷按鈕測試</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            padding: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .btn {
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>問卷系統按鈕測試頁面</h1>
+
+        <div class="test-section">
+            <h3>測試1: 基本連結按鈕</h3>
+            <a href="http://localhost:5001/surveys/65e06e6a-51fa-4a28-9f81-33794c59f486"
+               class="btn btn-primary">
+                <i class="fas fa-eye"></i> 測試連結（應該可以點擊）
+            </a>
+        </div>
+
+        <div class="test-section">
+            <h3>測試2: 按鈕組</h3>
+            <div class="btn-group" role="group">
+                <a href="http://localhost:5001/surveys/65e06e6a-51fa-4a28-9f81-33794c59f486"
+                   class="btn btn-sm btn-primary">
+                    <i class="fas fa-eye"></i> 查看
+                </a>
+                <a href="http://localhost:5001/surveys/65e06e6a-51fa-4a28-9f81-33794c59f486/analytics"
+                   class="btn btn-sm btn-info">
+                    <i class="fas fa-chart-bar"></i> 分析
+                </a>
+                <button class="btn btn-sm btn-success" onclick="alert('按鈕可以點擊！')">
+                    <i class="fas fa-robot"></i> AI填寫
+                </button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>測試3: 帶邊框的按鈕組</h3>
+            <div class="btn-group" role="group">
+                <a href="http://localhost:5001/surveys/65e06e6a-51fa-4a28-9f81-33794c59f486"
+                   class="btn btn-sm btn-outline-primary"
+                   style="border: 1px solid #337ab7; color: #337ab7;">
+                    <i class="fas fa-eye"></i> 查看
+                </a>
+                <a href="http://localhost:5001/surveys/65e06e6a-51fa-4a28-9f81-33794c59f486/analytics"
+                   class="btn btn-sm btn-outline-info"
+                   style="border: 1px solid #5bc0de; color: #5bc0de;">
+                    <i class="fas fa-chart-bar"></i> 分析
+                </a>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>測試4: 檢查JavaScript載入</h3>
+            <button class="btn btn-warning" onclick="testJS()">
+                點擊測試JavaScript
+            </button>
+            <div id="jsResult" style="margin-top: 10px;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>診斷信息</h3>
+            <ul>
+                <li>jQuery版本: <span id="jqueryVersion"></span></li>
+                <li>Bootstrap版本: <span id="bootstrapVersion"></span></li>
+                <li>Font Awesome載入: <span id="faLoaded"></span></li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-latest.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script>
+    <script>
+        function testJS() {
+            document.getElementById('jsResult').innerHTML =
+                '<div class="alert alert-success">JavaScript 正常運作！</div>';
+        }
+
+        $(document).ready(function() {
+            // 檢查jQuery版本
+            $('#jqueryVersion').text($.fn.jquery || '未載入');
+
+            // 檢查Bootstrap
+            $('#bootstrapVersion').text(typeof $.fn.modal !== 'undefined' ? 'Bootstrap 3.x 已載入' : '未載入');
+
+            // 檢查Font Awesome
+            var faTest = document.createElement('i');
+            faTest.className = 'fas fa-check';
+            document.body.appendChild(faTest);
+            var faComputed = window.getComputedStyle(faTest).fontFamily;
+            $('#faLoaded').text(faComputed.indexOf('Font Awesome') !== -1 ? '是' : '否');
+            document.body.removeChild(faTest);
+
+            // 測試按鈕點擊
+            console.log('頁面載入完成，所有按鈕應該可以點擊');
+
+            // 為所有按鈕添加點擊事件監聽
+            $('.btn').on('click', function(e) {
+                console.log('按鈕被點擊:', $(this).text());
+            });
+        });
+    </script>
+</body>
+</html>

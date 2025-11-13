@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/survey-enhanced.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid mt-3">
     <div class="row">
@@ -51,34 +55,41 @@
                                     </td>
                                     <td>
                                         <div class="btn-group" role="group">
-                                            <a href="/surveys/{{ survey.survey_id }}" 
-                                               class="btn btn-sm btn-outline-primary">
+                                            <a href="/surveys/{{ survey.survey_id }}"
+                                               class="btn btn-primary btn-sm"
+                                               style="text-decoration: none;">
                                                 <i class="fas fa-eye"></i> 查看
                                             </a>
-                                            <button class="btn btn-sm btn-outline-success" 
+                                            <a href="/surveys/{{ survey.survey_id }}/analytics"
+                                               class="btn btn-info btn-sm"
+                                               style="text-decoration: none;">
+                                                <i class="fas fa-chart-bar"></i> 分析
+                                            </a>
+                                            <button class="btn btn-success btn-sm"
                                                     onclick="fillSurvey('{{ survey.survey_id }}', '{{ survey.title }}')">
                                                 <i class="fas fa-robot"></i> AI填寫
                                             </button>
-                                            <div class="dropdown">
-                                                <button class="btn btn-sm btn-outline-info dropdown-toggle" 
-                                                        type="button" data-toggle="dropdown">
-                                                    <i class="fas fa-download"></i> 匯出
-                                                </button>
-                                                <div class="dropdown-menu">
-                                                    <a class="dropdown-item" 
-                                                       href="/surveys/{{ survey.survey_id }}/export?format=csv">
+                                            <button class="btn btn-default btn-sm dropdown-toggle"
+                                                    type="button" data-toggle="dropdown">
+                                                <i class="fas fa-download"></i> 匯出 <span class="caret"></span>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li>
+                                                    <a href="/surveys/{{ survey.survey_id }}/export?format=csv">
                                                         <i class="fas fa-file-csv"></i> CSV格式
                                                     </a>
-                                                    <a class="dropdown-item" 
-                                                       href="/surveys/{{ survey.survey_id }}/export?format=json">
+                                                </li>
+                                                <li>
+                                                    <a href="/surveys/{{ survey.survey_id }}/export?format=json">
                                                         <i class="fas fa-file-code"></i> JSON格式
                                                     </a>
-                                                    <a class="dropdown-item" 
-                                                       href="/surveys/{{ survey.survey_id }}/export?format=excel">
+                                                </li>
+                                                <li>
+                                                    <a href="/surveys/{{ survey.survey_id }}/export?format=excel">
                                                         <i class="fas fa-file-excel"></i> Excel格式
                                                     </a>
-                                                </div>
-                                            </div>
+                                                </li>
+                                            </ul>
                                         </div>
                                     </td>
                                 </tr>

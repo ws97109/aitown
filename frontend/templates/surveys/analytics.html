@@ -1,0 +1,513 @@
+{% extends "base.html" %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/survey-enhanced.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div style="min-height: 100vh; padding: 20px 0; background: #ffffff;">
+    <div class="survey-container" style="color: #000000;">
+        <!-- 標題區 -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="mb-2">
+                    <i class="fas fa-chart-bar text-primary"></i>
+                    {{ survey.title }} - 數據分析
+                </h2>
+                <p class="text-muted">{{ survey.description }}</p>
+            </div>
+            <div>
+                <a href="/surveys/{{ survey.survey_id }}" class="btn btn-secondary btn-enhanced">
+                    <i class="fas fa-arrow-left"></i> 返回詳情
+                </a>
+            </div>
+        </div>
+
+        <!-- 統計摘要卡片 -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="stat-card" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-value">{{ analytics.response_summary.total_responses }}</div>
+                            <div class="stat-label">總回應數</div>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3 mb-3">
+                <div class="stat-card" style="background: linear-gradient(135deg, #5cb85c, #4cae4c);">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-value">{{ analytics.response_summary.completed_responses }}</div>
+                            <div class="stat-label">已完成</div>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3 mb-3">
+                <div class="stat-card" style="background: linear-gradient(135deg, #f0ad4e, #ec971f);">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-value">{{ "%.1f"|format(analytics.response_summary.completion_rate) }}%</div>
+                            <div class="stat-label">完成率</div>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3 mb-3">
+                <div class="stat-card" style="background: linear-gradient(135deg, #5bc0de, #46b8da);">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-value">{{ analytics.survey_info.question_count }}</div>
+                            <div class="stat-label">問題總數</div>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-question-circle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 圖表展示區 -->
+        {% for question in survey.questions %}
+        {% set question_id = question.id|string %}
+        {% set question_analytics = analytics.question_analytics.get(question_id, {}) %}
+
+        <div class="card-enhanced mb-4">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="question-number">Q{{ question.id }}</span>
+                        <span>{{ question.text }}</span>
+                    </div>
+                    <span class="badge badge-enhanced"
+                          style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                        {% if question.type == 'single_choice' %}單選題
+                        {% elif question.type == 'multiple_choice' %}多選題
+                        {% elif question.type == 'rating' %}評分題
+                        {% elif question.type == 'text' %}文字題
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if question.type == 'single_choice' %}
+                <!-- 單選題 - 圓餅圖 -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="chart-container" style="height: 350px;">
+                            <canvas id="chart-{{ question_id }}-pie"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="chart-container" style="height: 350px;">
+                            <canvas id="chart-{{ question_id }}-bar"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 數據表格 -->
+                <div class="table-responsive mt-3">
+                    <table class="table table-enhanced">
+                        <thead>
+                            <tr>
+                                <th>選項</th>
+                                <th>票數</th>
+                                <th>百分比</th>
+                                <th>視覺化</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for option, count in question_analytics.choice_counts.items() %}
+                            {% set percentage = question_analytics.percentages.get(option, 0) %}
+                            <tr>
+                                <td><strong>{{ option }}</strong></td>
+                                <td><span class="badge badge-primary">{{ count }}</span></td>
+                                <td>{{ "%.1f"|format(percentage) }}%</td>
+                                <td style="width: 40%;">
+                                    <div class="progress-enhanced">
+                                        <div class="progress-bar-enhanced"
+                                             style="width: {{ percentage }}%;">
+                                            {{ "%.1f"|format(percentage) }}%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% elif question.type == 'multiple_choice' %}
+                <!-- 多選題 - 橫向柱狀圖 -->
+                <div class="chart-container" style="height: 400px;">
+                    <canvas id="chart-{{ question_id }}-horizontal"></canvas>
+                </div>
+
+                <div class="table-responsive mt-3">
+                    <table class="table table-enhanced">
+                        <thead>
+                            <tr>
+                                <th>選項</th>
+                                <th>選擇次數</th>
+                                <th>選擇率</th>
+                                <th>視覺化</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for option, count in question_analytics.choice_counts.items() %}
+                            {% set percentage = question_analytics.percentages.get(option, 0) %}
+                            <tr>
+                                <td><strong>{{ option }}</strong></td>
+                                <td><span class="badge badge-success">{{ count }}</span></td>
+                                <td>{{ "%.1f"|format(percentage) }}%</td>
+                                <td style="width: 40%;">
+                                    <div class="progress-enhanced">
+                                        <div class="progress-bar-enhanced"
+                                             style="width: {{ percentage }}%; background: linear-gradient(90deg, #5cb85c, #4cae4c);">
+                                            {{ "%.1f"|format(percentage) }}%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% elif question.type == 'rating' %}
+                <!-- 評分題 - 分數分布 -->
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="chart-container" style="height: 350px;">
+                            <canvas id="chart-{{ question_id }}-rating"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center p-4">
+                            <h3 class="text-muted mb-2">平均評分</h3>
+                            <div style="font-size: 4rem; font-weight: bold; color: #f0ad4e;">
+                                {{ "%.2f"|format(question_analytics.average) }}
+                            </div>
+                            <div class="rating-stars my-3">
+                                {% for i in range(1, 6) %}
+                                    {% if i <= question_analytics.average %}
+                                        <span class="star">★</span>
+                                    {% else %}
+                                        <span class="star" style="color: #ddd;">★</span>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            <div class="mt-4">
+                                <p class="mb-2"><strong>最高分：</strong> {{ question_analytics.max }}</p>
+                                <p class="mb-2"><strong>最低分：</strong> {{ question_analytics.min }}</p>
+                                <p class="mb-2"><strong>總回應：</strong> {{ question_analytics.total_responses }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% elif question.type == 'text' %}
+                <!-- 文字題 - 統計分析 -->
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>文字題分析：</strong>
+                            共收到 <strong>{{ question_analytics.total_responses }}</strong> 個回應，
+                            平均長度為 <strong>{{ "%.1f"|format(question_analytics.average_length) }}</strong> 個字元
+                        </div>
+
+                        {% if question_analytics.common_words %}
+                        <div class="chart-container" style="height: 300px;">
+                            <div class="chart-header">
+                                <h4>高頻詞彙分析</h4>
+                            </div>
+                            <canvas id="chart-{{ question_id }}-words"></canvas>
+                        </div>
+
+                        <div class="tag-cloud mt-4">
+                            <h6 class="w-100 mb-3">詞彙雲：</h6>
+                            {% for word, count in question_analytics.common_words %}
+                            <span class="tag-item" style="font-size: {{ 0.8 + (count / 10) }}rem;">
+                                {{ word }} ({{ count }})
+                            </span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- 匯出選項 -->
+        <div class="card-enhanced">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-download"></i> 數據匯出</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">匯出完整的問卷數據和分析結果</p>
+                <div class="btn-group" role="group">
+                    <a href="/surveys/{{ survey.survey_id }}/export?format=csv"
+                       class="btn btn-primary-enhanced btn-enhanced">
+                        <i class="fas fa-file-csv"></i> CSV 格式
+                    </a>
+                    <a href="/surveys/{{ survey.survey_id }}/export?format=json"
+                       class="btn btn-info-enhanced btn-enhanced">
+                        <i class="fas fa-file-code"></i> JSON 格式
+                    </a>
+                    <a href="/surveys/{{ survey.survey_id }}/export?format=excel"
+                       class="btn btn-success-enhanced btn-enhanced">
+                        <i class="fas fa-file-excel"></i> Excel 格式
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block js_content %}
+<script>
+// Chart.js 全局配置
+Chart.defaults.font.family = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+Chart.defaults.font.size = 13;
+Chart.defaults.color = '#666';
+
+// 調色板
+const colorPalette = [
+    '#667eea', '#764ba2', '#f093fb', '#4facfe',
+    '#43e97b', '#fa709a', '#fee140', '#30cfd0',
+    '#a8edea', '#fed6e3', '#ffecd2', '#fcb69f'
+];
+
+{% for question in survey.questions %}
+{% set question_id = question.id|string %}
+{% set question_analytics = analytics.question_analytics.get(question_id, {}) %}
+
+{% if question.type == 'single_choice' %}
+// 單選題 - 圓餅圖
+{
+    const ctx = document.getElementById('chart-{{ question_id }}-pie');
+    const data = {
+        labels: {{ question_analytics.choice_counts.keys()|list|tojson }},
+        datasets: [{
+            data: {{ question_analytics.choice_counts.values()|list|tojson }},
+            backgroundColor: colorPalette,
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    };
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 15,
+                        font: { size: 12 }
+                    }
+                },
+                title: {
+                    display: true,
+                    text: '選項分布 - 圓餅圖',
+                    font: { size: 16, weight: 'bold' }
+                }
+            }
+        }
+    });
+}
+
+// 單選題 - 柱狀圖
+{
+    const ctx = document.getElementById('chart-{{ question_id }}-bar');
+    const data = {
+        labels: {{ question_analytics.choice_counts.keys()|list|tojson }},
+        datasets: [{
+            label: '票數',
+            data: {{ question_analytics.choice_counts.values()|list|tojson }},
+            backgroundColor: 'rgba(102, 126, 234, 0.7)',
+            borderColor: 'rgba(102, 126, 234, 1)',
+            borderWidth: 2
+        }]
+    };
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                title: {
+                    display: true,
+                    text: '選項分布 - 柱狀圖',
+                    font: { size: 16, weight: 'bold' }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 }
+                }
+            }
+        }
+    });
+}
+
+{% elif question.type == 'multiple_choice' %}
+// 多選題 - 橫向柱狀圖
+{
+    const ctx = document.getElementById('chart-{{ question_id }}-horizontal');
+    const data = {
+        labels: {{ question_analytics.choice_counts.keys()|list|tojson }},
+        datasets: [{
+            label: '選擇次數',
+            data: {{ question_analytics.choice_counts.values()|list|tojson }},
+            backgroundColor: 'rgba(92, 184, 92, 0.7)',
+            borderColor: 'rgba(92, 184, 92, 1)',
+            borderWidth: 2
+        }]
+    };
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: data,
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                title: {
+                    display: true,
+                    text: '選項選擇頻率',
+                    font: { size: 16, weight: 'bold' }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 }
+                }
+            }
+        }
+    });
+}
+
+{% elif question.type == 'rating' %}
+// 評分題 - 分數分布
+{
+    const ctx = document.getElementById('chart-{{ question_id }}-rating');
+    const distribution = {{ question_analytics.distribution|tojson }};
+
+    const data = {
+        labels: ['1分', '2分', '3分', '4分', '5分'],
+        datasets: [{
+            label: '評分人數',
+            data: [
+                distribution['1'] || 0,
+                distribution['2'] || 0,
+                distribution['3'] || 0,
+                distribution['4'] || 0,
+                distribution['5'] || 0
+            ],
+            backgroundColor: [
+                'rgba(217, 83, 79, 0.7)',
+                'rgba(240, 173, 78, 0.7)',
+                'rgba(91, 192, 222, 0.7)',
+                'rgba(92, 184, 92, 0.7)',
+                'rgba(102, 126, 234, 0.7)'
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    };
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                title: {
+                    display: true,
+                    text: '評分分布',
+                    font: { size: 16, weight: 'bold' }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 }
+                }
+            }
+        }
+    });
+}
+
+{% elif question.type == 'text' and question_analytics.common_words %}
+// 文字題 - 高頻詞彙
+{
+    const ctx = document.getElementById('chart-{{ question_id }}-words');
+    const commonWords = {{ question_analytics.common_words|tojson }};
+
+    const data = {
+        labels: commonWords.map(item => item[0]),
+        datasets: [{
+            label: '出現次數',
+            data: commonWords.map(item => item[1]),
+            backgroundColor: 'rgba(91, 192, 222, 0.7)',
+            borderColor: 'rgba(91, 192, 222, 1)',
+            borderWidth: 2
+        }]
+    };
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 }
+                }
+            }
+        }
+    });
+}
+{% endif %}
+
+{% endfor %}
+</script>
+{% endblock %}
